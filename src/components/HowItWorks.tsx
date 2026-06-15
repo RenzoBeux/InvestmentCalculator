@@ -2,7 +2,7 @@ const STEPS = [
   {
     n: "01",
     title: "Acumulás mes a mes",
-    body: "Tu inicial más cada aporte se capitalizan en un ETF global. Mientras acumulás se asume un rendimiento real anual (editable en los ajustes).",
+    body: "Tu inicial más cada aporte se capitalizan a un rendimiento real anual. Es un supuesto, no una recomendación: editalo en los ajustes según en qué inviertas vos.",
   },
   {
     n: "02",
@@ -27,7 +27,7 @@ export function HowItWorks() {
       <div className="how-inner">
         <div className="section-head">
           <span className="eyebrow">Cómo funciona</span>
-          <h2>Cuatro ideas, ningún humo</h2>
+          <h2>Las cuatro ideas del modelo</h2>
           <p>
             El modelo es determinista y transparente: mismos números, mismo
             resultado. Sirve para entender la mecánica, no para predecir el futuro.

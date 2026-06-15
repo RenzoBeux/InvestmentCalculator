@@ -44,7 +44,7 @@ export interface Assumptions {
   returnMode: ReturnMode;
   /** Inflación anual asumida (solo se usa en modo "nominal"). */
   inflation: number;
-  /** Rendimiento anual mientras acumulás (100% en el ETF global). */
+  /** Rendimiento anual mientras acumulás (supuesto editable, sin atar a un instrumento). */
   accumulationReturn: number;
   /** Rendimiento anual durante el retiro, según la cartera predefinida elegida. */
   retirementReturns: Record<PresetAllocation, number>;

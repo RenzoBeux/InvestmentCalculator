@@ -1,9 +1,9 @@
 # Planificador de retiro
 
 Calculadora de independencia financiera (FIRE) en **React 18 + TypeScript + Vite**.
-Modela dos fases —acumulación en un ETF global y retiro con una cartera
-acciones/bonos a elección— todo en **dólares de hoy** (rendimiento real, ya
-descontada la inflación).
+Modela dos fases —acumulación a un rendimiento real configurable y retiro con una
+cartera acciones/bonos a elección— todo en **dólares de hoy** (rendimiento real,
+ya descontada la inflación).
 
 ## Correr en local
 
@@ -43,7 +43,7 @@ mejorar el modelo.
   real, y reportar una *probabilidad de éxito* en vez de un único resultado.
   Es lo que captura el riesgo de secuencia (años malos al inicio del retiro),
   que el modelo determinista actual ignora.
-- Permitir elegir el rendimiento durante la acumulación (hoy es fijo, 100% acciones).
+- Modelar la acumulación con una cartera (acciones/bonos) en vez de un único rendimiento plano.
 - Aportes que crecen con el tiempo (subís el aporte cada año).
 - Glide path: pasaje gradual de acciones a bonos en vez de un salto al jubilarte.
 - Persistir los inputs en `localStorage` o en una URL compartible.

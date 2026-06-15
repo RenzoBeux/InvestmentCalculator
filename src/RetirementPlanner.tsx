@@ -192,8 +192,8 @@ export default function RetirementPlanner() {
           <span className="eyebrow">La calculadora</span>
           <h2>Tu plan en números</h2>
           <p>
-            Acumulás en un ETF global (~{formatPct(result.accumulationReturn)} real
-            anual); al jubilarte aplicás la cartera que elijas. Todo en{" "}
+            Acumulás a ~{formatPct(result.accumulationReturn)} real anual; al
+            jubilarte aplicás la cartera que elijas. Todo en{" "}
             {currencyLabel} de hoy. ¿Otros supuestos? Abrí los ajustes avanzados.
           </p>
         </div>
