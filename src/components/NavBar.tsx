@@ -1,5 +1,6 @@
 import { SITE } from "../siteConfig";
 import { BrandMark } from "./BrandMark";
+import { GitHubIcon } from "./GitHubIcon";
 import { ThemeToggle } from "./ThemeToggle";
 
 export function NavBar() {
@@ -15,9 +16,19 @@ export function NavBar() {
 
         <nav className="nav-links">
           <a href="#como-funciona">Cómo funciona</a>
+          <a href={SITE.authorUrl} target="_blank" rel="noreferrer">
+            renzobeux.dev
+          </a>
           {SITE.repoUrl && (
-            <a href={SITE.repoUrl} target="_blank" rel="noreferrer">
-              Código
+            <a
+              className="icon-link"
+              href={SITE.repoUrl}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Código fuente en GitHub"
+              title="Código fuente en GitHub"
+            >
+              <GitHubIcon />
             </a>
           )}
           <a className="nav-cta" href="#calculadora">

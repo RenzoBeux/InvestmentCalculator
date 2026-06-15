@@ -1,5 +1,6 @@
 import { SITE } from "../siteConfig";
 import { BrandMark } from "./BrandMark";
+import { GitHubIcon } from "./GitHubIcon";
 
 export function Footer() {
   const year = new Date().getFullYear();
@@ -20,9 +21,19 @@ export function Footer() {
         <nav className="footer-links">
           <a href="#calculadora">Calculadora</a>
           <a href="#como-funciona">Cómo funciona</a>
+          <a href={SITE.authorUrl} target="_blank" rel="noreferrer">
+            renzobeux.dev
+          </a>
           {SITE.repoUrl && (
-            <a href={SITE.repoUrl} target="_blank" rel="noreferrer">
-              Código fuente
+            <a
+              className="icon-link"
+              href={SITE.repoUrl}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Código fuente en GitHub"
+              title="Código fuente en GitHub"
+            >
+              <GitHubIcon />
             </a>
           )}
         </nav>

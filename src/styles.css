@@ -138,6 +138,11 @@ summary:focus-visible {
   color: var(--ink);
 }
 
+.icon-link {
+  display: inline-flex;
+  align-items: center;
+}
+
 .nav-cta {
   padding: 0.45rem 0.95rem;
   border-radius: 999px;
@@ -536,6 +541,29 @@ input[type="range"]::-moz-range-thumb {
 .select:focus {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+/* Pista de riesgo sobre los segmentos de cartera: izquierda = más riesgo. */
+.risk-scale {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.55rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.risk-scale-track {
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--bad),
+    var(--warn),
+    var(--accent)
+  );
+  opacity: 0.75;
 }
 
 .seg {

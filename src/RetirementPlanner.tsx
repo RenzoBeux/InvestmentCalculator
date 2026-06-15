@@ -372,6 +372,11 @@ export default function RetirementPlanner() {
                 </InfoTip>
               </span>
             </label>
+            <div className="risk-scale" aria-hidden="true">
+              <span>Más riesgo</span>
+              <span className="risk-scale-track" />
+              <span>Menos riesgo</span>
+            </div>
             <SegmentedWithCustom
               options={ALLOCATIONS.map((a) => ({
                 value: a,

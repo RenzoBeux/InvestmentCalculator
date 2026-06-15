@@ -9,4 +9,6 @@ export const SITE = {
   tagline: "Calculá cuánto necesitás para vivir de tus inversiones",
   /** Reemplazá con la URL de tu repositorio (o dejá vacío para ocultar el enlace). */
   repoUrl: "https://github.com/",
+  /** Página personal del autor. */
+  authorUrl: "https://renzobeux.dev",
 };
