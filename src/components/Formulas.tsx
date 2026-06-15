@@ -158,7 +158,7 @@ export function Formulas() {
           <summary>
             <span className="math-summary-text">
               <span className="eyebrow">La matemática</span>
-              <span className="math-summary-title">Las fórmulas, en crudo</span>
+              <span className="math-summary-title">Las fórmulas</span>
             </span>
             <span className="adv-chevron" aria-hidden="true">
               ›

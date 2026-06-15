@@ -125,6 +125,11 @@ export default function RetirementPlanner() {
   // edad (currentAge 0 = "sin cargar") no aplica. Coincide con planSummary.
   const ageMode = currentAge > 0;
 
+  // ¿Estamos despejando un valor (aporte/inicial) en vez de calcular la edad?
+  // En "timeline" no hay edad de jubilación objetivo: ese campo y Coast FIRE
+  // no aplican, porque ahí la edad es justamente lo que calculamos.
+  const solveMode = inputs.solveFor !== "timeline";
+
   // Auto-cálculo: en los modos "monthly"/"initial" despejamos el valor que falta
   // y lo inyectamos en los inputs ANTES de simular (vía applySolve), de modo que
   // gráfico, stats y veredicto cuenten la misma historia. `solve` guarda el
@@ -244,9 +249,10 @@ export default function RetirementPlanner() {
   const { retirementAge, retirementSummary } = summary;
 
   // Coast FIRE: capital que, sin aportar más, capitaliza hasta el número de
-  // retiro para la edad objetivo. Solo tiene sentido si hay edad cargada y la
-  // jubilación objetivo es más adelante.
-  const coastApplies = ageMode && inputs.coastTargetAge > currentAge;
+  // retiro para la edad objetivo. Solo aplica en los modos de despeje (en
+  // "timeline" no hay edad objetivo) y si la jubilación objetivo es más adelante.
+  const coastApplies =
+    solveMode && ageMode && inputs.coastTargetAge > currentAge;
   const coast = coastNumber(
     result.fireNumber,
     result.accumulationReturn,
@@ -262,7 +268,6 @@ export default function RetirementPlanner() {
 
   // En modo despeje, qué mostrar en el campo calculado (aporte o inicial):
   // el valor resuelto + una aclaración, o "—" con el motivo si no es posible.
-  const solveMode = inputs.solveFor !== "timeline";
   const solvedField = (() => {
     const kind = inputs.solveFor; // "monthly" | "initial" (no entra en "timeline")
     const suffix = kind === "monthly" ? " / mes" : "";
@@ -359,11 +364,11 @@ export default function RetirementPlanner() {
             <small>Para mostrar tu edad en el gráfico y en los datos de jubilación.</small>
           </div>
 
-          {ageMode && (
+          {ageMode && solveMode && (
             <div className="field">
               <label>
                 <span className="label-with-info">
-                  {solveMode ? "Edad de jubilación objetivo" : "Jubilación objetivo"}
+                  Edad de jubilación objetivo
                   <InfoTip label="Qué es Coast FIRE">
                     <strong>Coast FIRE</strong> es el capital que, sin aportar un
                     peso más, crece solo hasta tu número de retiro para cuando
@@ -386,9 +391,7 @@ export default function RetirementPlanner() {
               <small>
                 {inputs.solveFor === "monthly"
                   ? "Ajustamos el aporte mensual para que llegues justo a esta edad."
-                  : inputs.solveFor === "initial"
-                  ? "Ajustamos la inversión inicial para que llegues justo a esta edad."
-                  : "Edad a la que querés jubilarte (para Coast FIRE)."}
+                  : "Ajustamos la inversión inicial para que llegues justo a esta edad."}
               </small>
             </div>
           )}
