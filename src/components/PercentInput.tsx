@@ -33,6 +33,7 @@ export function PercentInput({
     <div className="pct-input">
       <input
         type="number"
+        inputMode="decimal"
         step={step}
         min={0}
         max={max}

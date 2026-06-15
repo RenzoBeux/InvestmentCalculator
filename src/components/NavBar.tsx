@@ -16,6 +16,7 @@ export function NavBar() {
 
         <nav className="nav-links">
           <a href="#como-funciona">Cómo funciona</a>
+          <a href="#la-matematica">Fórmulas</a>
           <a href={SITE.authorUrl} target="_blank" rel="noreferrer">
             renzobeux.dev
           </a>

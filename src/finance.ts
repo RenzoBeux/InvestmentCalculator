@@ -99,10 +99,10 @@ export interface PlanInputs {
 }
 
 export const DEFAULT_INPUTS: PlanInputs = {
-  initial: 6000,
-  monthly: 1000,
+  initial: 0,
+  monthly: 500,
   monthlyGrowth: 0,
-  monthlySpend: 2000,
+  monthlySpend: 1000,
   withdrawalRate: 0.04,
   retirementAllocation: "balanced",
   customRetirementReturn: 0.05,
