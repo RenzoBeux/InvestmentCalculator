@@ -7,11 +7,13 @@ export function Hero() {
           Cuánto necesitás para <em>vivir de tus inversiones</em>
         </h1>
         <p>
-          Armé esta calculadora para entender mi propio retiro y la comparto por
-          si te sirve. Poné cuánto aportás por mes y cuánto querés gastar: vas a
-          ver tu número, en cuántos años llegás y si tu cartera aguanta. Todo en
-          valores de hoy, con cada supuesto a la vista para que lo ajustes a tu
-          caso.
+          <strong>FIRE</strong> significa <em>Financial Independence, Retire
+          Early</em>: independencia financiera para retirarte antes y vivir de
+          tus inversiones. Armé esta calculadora para entender mi propio retiro y
+          la comparto por si te sirve. Poné cuánto aportás por mes y cuánto querés
+          gastar: vas a ver tu número, en cuántos años llegás y si tu cartera
+          aguanta. Todo en valores de hoy, con cada supuesto a la vista para que
+          lo ajustes a tu caso.
         </p>
 
         <div className="hero-actions">
