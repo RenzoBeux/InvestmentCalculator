@@ -41,8 +41,8 @@ export function Footer() {
 
       <div className="footer-fine">
         <p>
-          Modelo determinista con rendimientos promedio: no incluye el riesgo de
-          secuencia (años malos justo al inicio del retiro). Estimación educativa,
+          Usa rendimientos promedio fijos: no incluye el riesgo de secuencia
+          (años malos justo al inicio del retiro). Estimación educativa,
           no asesoramiento financiero.
         </p>
         <p>© {year} {SITE.brand}</p>

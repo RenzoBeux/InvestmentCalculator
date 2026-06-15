@@ -72,9 +72,9 @@ const SOLVE_HINT: Record<SolveFor, string> = {
     "Fijás la edad y el aporte; calculamos con cuánta inversión inicial necesitás arrancar hoy.",
 };
 const ALLOCATION_NOTES: Record<Allocation, string> = {
-  aggressive: "máximo rendimiento, máxima volatilidad",
-  balanced: "el clásico balance de la regla del 4%",
-  conservative: "muy estable, pero puede no rendir lo suficiente",
+  aggressive: "rinde más, con más volatilidad",
+  balanced: "el balance de la regla del 4%",
+  conservative: "muy estable, con rendimiento más bajo",
   custom: "el rendimiento real que vos estimes para tu cartera",
 };
 
@@ -318,9 +318,9 @@ export default function RetirementPlanner() {
           <span className="eyebrow">La calculadora</span>
           <h2>Tu plan en números</h2>
           <p>
-            Acumulás a ~{formatPct(result.accumulationReturn)} real anual; al
+            Acumulás a ~{formatPct(result.accumulationReturn)} real anual. Al
             jubilarte aplicás la cartera que elijas. Todo en{" "}
-            {currencyLabel} de hoy. ¿Otros supuestos? Abrí los ajustes avanzados.
+            {currencyLabel} de hoy. Cambiás los supuestos en los ajustes avanzados.
           </p>
         </div>
 
@@ -457,8 +457,8 @@ export default function RetirementPlanner() {
                   Cuánto gastás por mes para vivir, en{" "}
                   <strong>poder de compra de hoy</strong>. El modelo trabaja en
                   términos reales (la inflación ya está descontada), así que este
-                  número se mantiene constante en el tiempo: no hace falta que lo
-                  “infles” a futuro.
+                  número se mantiene constante en el tiempo, no hace falta
+                  ajustarlo a futuro.
                 </InfoTip>
               </span>
             </label>
@@ -512,9 +512,10 @@ export default function RetirementPlanner() {
                     <InfoTip label="Qué es la tasa de retiro">
                       Es el porcentaje de tu cartera que retirás cada año para
                       vivir. La <strong>regla del 4%</strong> sugiere que retirar
-                      ~4% anual es históricamente sostenible. Más baja = más
-                      margen, pero necesitás más capital; más alta = menos
-                      capital, pero más riesgo de quedarte corto. Tu número de
+                      ~4% anual es históricamente sostenible. Una tasa más baja
+                      necesita más capital pero te deja más margen. Una más alta
+                      necesita menos capital pero sube el riesgo de quedarte
+                      corto. Tu número de
                       retiro = gasto anual ÷ tasa.
                     </InfoTip>
                   </span>
@@ -554,8 +555,8 @@ export default function RetirementPlanner() {
                     Cartera en el retiro
                     <InfoTip label="Qué es la cartera en el retiro">
                       La mezcla de acciones y bonos cuando te jubilás. Más
-                      acciones rinde más, pero con más volatilidad; más bonos es
-                      más estable, pero rinde menos. Podés editar el rendimiento
+                      acciones rinde más pero con más volatilidad. Más bonos es
+                      más estable pero rinde menos. Podés editar el rendimiento
                       de cada una en los <strong>ajustes avanzados</strong>, o
                       elegir <strong>Personalizada</strong> para fijar el
                       rendimiento a mano.

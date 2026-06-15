@@ -110,7 +110,7 @@ const GROUPS: Group[] = [
             <sub>a</sub> × (1 + <V>r</V>) − <V>gasto anual</V>
           </>
         ),
-        desc: "Cada año la cartera rinde y vos retirás tu gasto. La diferencia entre rendir y gastar define si crece o se achica.",
+        desc: "Cada año la cartera rinde y vos retirás tu gasto. Si rinde más de lo que gastás crece, si no se achica.",
       },
       {
         name: "Punto de equilibrio",
@@ -119,7 +119,7 @@ const GROUPS: Group[] = [
             <V>equilibrio</V> = <V>gasto anual</V> ÷ <V>r</V>
           </>
         ),
-        desc: "El saldo donde el rendimiento empata exactamente el gasto. Por encima, la cartera crece sola; por debajo, se va agotando.",
+        desc: "El saldo donde el rendimiento empata exactamente el gasto. Si arrancás por encima la cartera crece, si arrancás por debajo se va agotando.",
       },
       {
         name: "Año de agotamiento",
@@ -128,7 +128,7 @@ const GROUPS: Group[] = [
             <V>años</V> = ln(<V>eq</V> ÷ (<V>eq</V> − <V>saldo</V>)) ÷ ln(1 + <V>r</V>)
           </>
         ),
-        desc: "Si arrancás por debajo del equilibrio, este es el año en que el capital llega a cero. Por encima, nunca se agota.",
+        desc: "Si arrancás por debajo del equilibrio, este es el año en que el capital llega a cero.",
       },
     ],
   },
@@ -167,8 +167,8 @@ export function Formulas() {
 
           <div className="math-body">
             <p className="math-intro">
-              El modelo es determinista: estas son todas las ecuaciones que corre,
-              sin nada escondido. <em>r</em> es siempre el rendimiento real anual.
+              Estas son todas las ecuaciones que corre el modelo. <em>r</em> es
+              siempre el rendimiento real anual.
             </p>
 
             {GROUPS.map((group) => (

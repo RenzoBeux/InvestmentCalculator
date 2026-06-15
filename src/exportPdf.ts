@@ -123,7 +123,7 @@ export async function generatePlanPdf(plan: PlanData): Promise<void> {
   const intro = doc.splitTextToSize(
     `Estimación en ${currencyByCode(
       currency
-    ).label.toLowerCase()} de hoy (términos reales, inflación descontada). Modelo determinista, con fines educativos.`,
+    ).label.toLowerCase()} de hoy (términos reales, inflación descontada). Con fines educativos.`,
     CW
   );
   doc.text(intro, M, y);
@@ -250,7 +250,7 @@ export async function generatePlanPdf(plan: PlanData): Promise<void> {
   doc.setFontSize(8);
   ink(doc, MUTED);
   const foot = doc.splitTextToSize(
-    "Modelo determinista con rendimientos promedio: no incluye el riesgo de secuencia (años malos al inicio del retiro). Estimación educativa, no asesoramiento financiero.",
+    "Usa rendimientos promedio fijos y no incluye el riesgo de secuencia (años malos al inicio del retiro). Estimación educativa, no asesoramiento financiero.",
     CW
   );
   doc.text(foot, M, H - M - foot.length * 9);

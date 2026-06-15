@@ -92,7 +92,7 @@ export function DataActions({ data, onImport }: Props) {
 
       <button type="button" className="btn-tool" onClick={handleShare}>
         <LinkIcon />
-        {copied ? "¡Enlace copiado!" : "Copiar enlace"}
+        {copied ? "Enlace copiado" : "Copiar enlace"}
       </button>
 
       <button

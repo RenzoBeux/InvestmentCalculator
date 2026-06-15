@@ -2,7 +2,7 @@ const STEPS = [
   {
     n: "01",
     title: "Acumulás mes a mes",
-    body: "Tu inicial más cada aporte se capitalizan a un rendimiento real anual. Es un supuesto, no una recomendación: editalo en los ajustes según en qué inviertas vos.",
+    body: "Tu inicial más cada aporte se capitalizan a un rendimiento real anual. Es un supuesto editable: cambialo en los ajustes según en qué inviertas vos.",
   },
   {
     n: "02",
@@ -17,7 +17,7 @@ const STEPS = [
   {
     n: "04",
     title: "Todo en términos reales",
-    body: "El gasto se mantiene en poder de compra de hoy y los rendimientos ya tienen la inflación descontada. La única forma honesta de mirar décadas.",
+    body: "El gasto se mantiene en poder de compra de hoy y los rendimientos ya tienen la inflación descontada.",
   },
 ];
 
@@ -28,10 +28,7 @@ export function HowItWorks() {
         <div className="section-head">
           <span className="eyebrow">Cómo funciona</span>
           <h2>Las cuatro ideas del modelo</h2>
-          <p>
-            El modelo es determinista y transparente: mismos números, mismo
-            resultado. Sirve para entender la mecánica, no para predecir el futuro.
-          </p>
+          <p>Con los mismos números te da siempre el mismo resultado.</p>
         </div>
 
         <div className="how-grid">

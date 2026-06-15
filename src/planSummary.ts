@@ -92,7 +92,7 @@ export function buildPlanSummary(
     const tail =
       surface === "pdf"
         ? "Bajá la tasa de retiro o juntá más capital."
-        : "Necesitás una tasa de retiro más baja, o más capital.";
+        : "Bajá la tasa de retiro o juntá más capital.";
     verdict = `${jubilasPhrase}, pero con ${alloc} (~${pct(
       result.retirementReturn
     )} real) ${middle} ${dep}. ${tail}`;
@@ -102,7 +102,7 @@ export function buildPlanSummary(
       result.trend === "grow"
         ? surface === "pdf"
           ? " — incluso sigue creciendo"
-          : " — de hecho, sigue creciendo"
+          : " — incluso sigue creciendo"
         : "";
     verdict = `${jubilasPhrase} y tu cartera (${alloc}) aguanta el retiro${growSuffix}. Tu ${pct(
       inputs.withdrawalRate
