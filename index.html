@@ -9,8 +9,26 @@
       content="Calculá cuánto necesitás para vivir de tus inversiones: tu número de retiro, en cuántos años llegás y si tu cartera aguanta. Multi-moneda y con supuestos editables."
     />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#f6f2e9" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#15130e" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f6f2e9" />
+    <!-- Aplica el tema elegido antes del primer pintado para evitar el parpadeo. -->
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem("fire.theme");
+          var choice = raw ? JSON.parse(raw) : "system";
+          var dark =
+            choice === "dark" ||
+            (choice === "system" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.setAttribute(
+            "data-theme",
+            dark ? "dark" : "light"
+          );
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute("content", dark ? "#15130e" : "#f6f2e9");
+        } catch (e) {}
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

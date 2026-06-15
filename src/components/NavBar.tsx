@@ -1,5 +1,6 @@
 import { SITE } from "../siteConfig";
 import { BrandMark } from "./BrandMark";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function NavBar() {
   return (
@@ -22,6 +23,7 @@ export function NavBar() {
           <a className="nav-cta" href="#calculadora">
             Calculadora
           </a>
+          <ThemeToggle />
         </nav>
       </div>
     </header>

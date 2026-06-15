@@ -45,7 +45,7 @@ export function makeCurrencyFormatter(code: string): Intl.NumberFormat {
 
 /** Etiquetas cortas para el eje del gráfico (p. ej. "$1,2M", "$340k"). */
 export function makeAxisFormatter(code: string): (v: number) => string {
-  const sym = currencyByCode(code).symbol.replace(/\$$/, "$");
+  const sym = currencyByCode(code).symbol;
   const prefix = sym.endsWith("$") || sym.length <= 2 ? sym : sym + " ";
   const fmt = (n: number) => n.toLocaleString(currencyByCode(code).locale);
   return (v: number) =>

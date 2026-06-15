@@ -6,6 +6,7 @@ import {
   type PlanData,
 } from "../exportData";
 import { generatePlanPdf } from "../exportPdf";
+import { buildShareUrl } from "../shareUrl";
 
 interface Props {
   /** Datos actuales a exportar. */
@@ -23,6 +24,18 @@ export function DataActions({ data, onImport }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  async function handleShare() {
+    setError(null);
+    try {
+      await navigator.clipboard.writeText(buildShareUrl(data));
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError("No se pudo copiar el enlace.");
+    }
+  }
 
   async function handlePdf() {
     setError(null);
@@ -75,6 +88,11 @@ export function DataActions({ data, onImport }: Props) {
       >
         <UploadIcon />
         Importar datos
+      </button>
+
+      <button type="button" className="btn-tool" onClick={handleShare}>
+        <LinkIcon />
+        {copied ? "¡Enlace copiado!" : "Copiar enlace"}
       </button>
 
       <button
@@ -134,6 +152,15 @@ function UploadIcon() {
       <path d="M12 16V4" />
       <path d="m7 9 5-5 5 5" />
       <path d="M5 21h14" />
+    </svg>
+  );
+}
+
+function LinkIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M9 12a3 3 0 0 1 3-3h4a3 3 0 1 1 0 6h-1" />
+      <path d="M15 12a3 3 0 0 1-3 3H8a3 3 0 1 1 0-6h1" />
     </svg>
   );
 }

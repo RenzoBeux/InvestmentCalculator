@@ -76,6 +76,13 @@ export interface PlanInputs {
   initial: number;
   /** Aporte mensual, en dólares de hoy. */
   monthly: number;
+  /**
+   * Crecimiento real anual del aporte (p. ej. 0.03 = +3% por año por encima de
+   * la inflación). 0 = aporte constante en poder de compra de hoy, que es como
+   * se comportaba el modelo antes de existir este campo. Siempre es real, sin
+   * importar `returnMode`, para no romper ese comportamiento por defecto.
+   */
+  monthlyGrowth: number;
   /** Gasto mensual deseado en el retiro, en dólares de hoy. */
   monthlySpend: number;
   /** Tasa de retiro segura (p. ej. 0.04 = 4%). */
@@ -87,15 +94,19 @@ export interface PlanInputs {
    * Se interpreta según `returnMode` (real o nominal), igual que los demás.
    */
   customRetirementReturn: number;
+  /** Edad objetivo de jubilación, usada solo para el cálculo de Coast FIRE. */
+  coastTargetAge: number;
 }
 
 export const DEFAULT_INPUTS: PlanInputs = {
   initial: 6000,
   monthly: 1000,
+  monthlyGrowth: 0,
   monthlySpend: 2000,
   withdrawalRate: 0.04,
   retirementAllocation: "balanced",
   customRetirementReturn: 0.05,
+  coastTargetAge: 65,
 };
 
 /**
@@ -123,6 +134,13 @@ export interface LifecycleResult {
   trend: Trend;
   /** Años dentro del retiro hasta agotarse (solo si la tendencia es "decline"). */
   depletionYear: number | null;
+  /**
+   * Dinero propio aportado al alcanzar el número (o al final del horizonte si no
+   * se alcanza): inicial + suma de todos los aportes mensuales.
+   */
+  contributedAtFire: number;
+  /** Lo que generó el rendimiento: saldo − aportes. El "interés compuesto". */
+  growthAtFire: number;
 }
 
 /**
@@ -138,6 +156,21 @@ export function effectiveRealReturn(annualReturn: number, assumptions: Assumptio
 export function fireNumber(monthlySpend: number, withdrawalRate: number): number {
   if (withdrawalRate <= 0) return Infinity;
   return (Math.max(0, monthlySpend) * 12) / withdrawalRate;
+}
+
+/**
+ * Número de Coast FIRE: el capital que, SIN aportar más, capitaliza hasta el
+ * número de retiro `fireTarget` en `yearsToTarget` años al rendimiento dado.
+ * Si ya estás en la edad objetivo (o pasaste), necesitás el número completo.
+ */
+export function coastNumber(
+  fireTarget: number,
+  annualReturn: number,
+  yearsToTarget: number
+): number {
+  if (!isFinite(fireTarget)) return Infinity;
+  if (yearsToTarget <= 0) return fireTarget;
+  return fireTarget / Math.pow(1 + annualReturn, yearsToTarget);
 }
 
 /**
@@ -165,15 +198,22 @@ export function computeLifecycle(
   const chartYears = Math.max(1, Math.round(assumptions.retirementChartYears));
 
   // --- Fase de acumulación ---
+  // El aporte arranca en `monthly` y crece `monthlyGrowth` (real) a fin de cada
+  // año. Llevamos la cuenta de cuánto pusiste vos (`contributed`) para separar el
+  // capital propio del interés compuesto.
   const monthlyRate = accumulationReturn / 12;
+  const monthlyGrowth = inputs.monthlyGrowth;
   const accumulationSeries: number[] = [initial];
   let balance = initial;
+  let contributed = initial;
+  let currentMonthly = monthly;
   let accumulationYears = 0;
   let reached = balance >= target;
 
   if (!reached) {
     for (let month = 1; month <= maxYears * 12; month++) {
-      balance = balance * (1 + monthlyRate) + monthly;
+      balance = balance * (1 + monthlyRate) + currentMonthly;
+      contributed += currentMonthly;
       if (month % 12 === 0) {
         accumulationSeries.push(balance);
         if (balance >= target) {
@@ -181,6 +221,8 @@ export function computeLifecycle(
           reached = true;
           break;
         }
+        // El aporte sube para el año siguiente.
+        currentMonthly *= 1 + monthlyGrowth;
       }
     }
   }
@@ -196,6 +238,8 @@ export function computeLifecycle(
       retirementSeries: [],
       trend: "decline",
       depletionYear: null,
+      contributedAtFire: contributed,
+      growthAtFire: balance - contributed,
     };
   }
 
@@ -241,5 +285,7 @@ export function computeLifecycle(
     retirementSeries,
     trend,
     depletionYear,
+    contributedAtFire: contributed,
+    growthAtFire: start - contributed,
   };
 }

@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import {
   computeLifecycle,
+  coastNumber,
   ALLOCATION_LABELS,
   ALLOCATIONS,
   DEFAULT_AGE,
@@ -22,7 +23,6 @@ import {
   type PlanInputs,
 } from "./finance";
 import {
-  CURRENCIES,
   DEFAULT_CURRENCY,
   currencyByCode,
   makeAxisFormatter,
@@ -30,18 +30,18 @@ import {
   formatPct,
 } from "./format";
 import { usePersistedState } from "./usePersistedState";
+import { useTheme } from "./useTheme";
+import { CHART as COLORS } from "./palette";
+import { buildChartSeries } from "./chartSeries";
+import { buildPlanSummary } from "./planSummary";
 import { AdvancedSettings } from "./components/AdvancedSettings";
 import { PercentInput } from "./components/PercentInput";
 import { InfoTip } from "./components/InfoTip";
 import { DataActions } from "./components/DataActions";
+import { SegmentedWithCustom } from "./components/SegmentedWithCustom";
+import { StatusBanner } from "./components/StatusBanner";
 import { type PlanData } from "./exportData";
-
-const COLORS = {
-  accumulation: "#2B5B8A",
-  grow: "#1E7A52",
-  decline: "#B23A2E",
-  target: "#B07D18",
-};
+import { readPlanFromHash } from "./shareUrl";
 
 const WITHDRAWAL_OPTIONS = [0.03, 0.035, 0.04];
 const ALLOCATION_NOTES: Record<Allocation, string> = {
@@ -51,18 +51,8 @@ const ALLOCATION_NOTES: Record<Allocation, string> = {
   custom: "el rendimiento real que vos estimes para tu cartera",
 };
 
-function useDarkMode() {
-  const [dark, setDark] = useState(
-    () => window.matchMedia("(prefers-color-scheme: dark)").matches
-  );
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = (e: MediaQueryListEvent) => setDark(e.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-  return dark;
-}
+/** ¿La tasa de retiro cargada no es uno de los presets? Entonces es personalizada. */
+const isCustomWithdrawal = (rate: number) => !WITHDRAWAL_OPTIONS.includes(rate);
 
 export default function RetirementPlanner() {
   const [inputs, setInputs] = usePersistedState<PlanInputs>(
@@ -82,7 +72,13 @@ export default function RetirementPlanner() {
     DEFAULT_AGE
   );
 
-  const dark = useDarkMode();
+  // La tasa de retiro guarda solo el número; este flag decide si mostramos los
+  // presets o el input personalizado. Se inicializa según el valor cargado.
+  const [withdrawalCustom, setWithdrawalCustom] = useState(() =>
+    isCustomWithdrawal(inputs.withdrawalRate)
+  );
+
+  const { dark } = useTheme();
   const result = useMemo(
     () => computeLifecycle(inputs, assumptions),
     [inputs, assumptions]
@@ -102,6 +98,7 @@ export default function RetirementPlanner() {
     setAssumptions(DEFAULT_ASSUMPTIONS);
     setCurrency(DEFAULT_CURRENCY);
     setCurrentAge(DEFAULT_AGE);
+    setWithdrawalCustom(isCustomWithdrawal(DEFAULT_INPUTS.withdrawalRate));
   }
 
   // Todo lo que el usuario configuró, listo para exportar a un archivo.
@@ -112,21 +109,42 @@ export default function RetirementPlanner() {
     setAssumptions(data.assumptions);
     setCurrency(data.currency);
     setCurrentAge(data.currentAge);
+    setWithdrawalCustom(isCustomWithdrawal(data.inputs.withdrawalRate));
   }
 
+  // Si la URL trae un plan compartido (#plan=...), ofrecemos cargarlo y limpiamos
+  // el hash. parsePlanData ya valida y sanea, así que un enlace roto no rompe nada.
+  useEffect(() => {
+    const shared = readPlanFromHash();
+    if (!shared) return;
+    history.replaceState(
+      null,
+      "",
+      window.location.pathname + window.location.search
+    );
+    if (
+      shared.ok &&
+      window.confirm(
+        "Este enlace contiene un plan. ¿Querés cargarlo? Reemplazará tus datos actuales."
+      )
+    ) {
+      applyImport(shared.data);
+    }
+    // Solo al montar: leemos el hash una vez.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const chartData = useMemo(() => {
-    const accYears = result.accumulationYears;
-    const retLen =
-      result.retirementSeries.length > 0 ? result.retirementSeries.length - 1 : 0;
-    const total = accYears + retLen;
+    const { accumulation, retirement, accYears, totalYears } =
+      buildChartSeries(result);
     const rows: { year: number; acc: number | null; ret: number | null }[] = [];
-    for (let k = 0; k <= total; k++) {
+    for (let k = 0; k <= totalYears; k++) {
       rows.push({
         year: k,
-        acc: k <= accYears ? Math.round(result.accumulationSeries[k]) : null,
+        acc: k <= accYears ? Math.round(accumulation[k].value) : null,
         ret:
           result.reached && k >= accYears
-            ? Math.round(result.retirementSeries[k - accYears])
+            ? Math.round(retirement[k - accYears].value)
             : null,
       });
     }
@@ -137,49 +155,35 @@ export default function RetirementPlanner() {
   const axisColor = dark ? "rgba(236,230,216,0.5)" : "rgba(33,29,22,0.5)";
   const gridColor = dark ? "rgba(236,230,216,0.1)" : "rgba(33,29,22,0.08)";
 
-  // Si hay edad cargada mostramos la edad real en vez de "años desde hoy".
-  const ageMode = currentAge > 0;
-  const retirementAge = currentAge + result.accumulationYears;
-  const depletionAge =
-    result.depletionYear != null ? retirementAge + result.depletionYear : null;
-  const jubilasFrase = ageMode
-    ? `Te jubilás a los ${retirementAge} años`
-    : `Te jubilás al año ${result.accumulationYears}`;
+  // Narrativa derivada (edad de jubilación, resumen y veredicto), compartida con
+  // el PDF a través de buildPlanSummary. Si hay edad cargada mostramos la edad
+  // real en vez de "años desde hoy".
+  const summary = buildPlanSummary(
+    result,
+    inputs,
+    assumptions,
+    currentAge,
+    { money: (n) => money.format(Math.round(n)), pct: formatPct },
+    "screen"
+  );
+  const { ageMode, retirementAge, retirementSummary } = summary;
 
-  const retirementSummary = !result.reached
-    ? "—"
-    : result.trend === "decline"
-    ? ageMode
-      ? `Se agota a los ~${depletionAge} años`
-      : `Se agota ~año ${result.depletionYear}`
-    : "Dura indefinidamente";
+  // Coast FIRE: capital que, sin aportar más, capitaliza hasta el número de
+  // retiro para la edad objetivo. Solo tiene sentido si hay edad cargada y la
+  // jubilación objetivo es más adelante.
+  const coastApplies = ageMode && inputs.coastTargetAge > currentAge;
+  const coast = coastNumber(
+    result.fireNumber,
+    result.accumulationReturn,
+    inputs.coastTargetAge - currentAge
+  );
 
-  let statusClass = "status ok";
-  let statusText: string;
-  if (!result.reached) {
-    statusClass = "status warn";
-    statusText = `Con ${money.format(inputs.monthly)}/mes no alcanzás tu número (${money.format(
-      Math.round(result.fireNumber)
-    )}) en ${assumptions.maxAccumulationYears} años. Subí el aporte o bajá el gasto.`;
-  } else if (result.trend === "decline") {
-    statusClass = "status bad";
-    statusText = `${jubilasFrase}, pero con ${
-      ALLOCATION_LABELS[inputs.retirementAllocation]
-    } (~${formatPct(
-      result.retirementReturn
-    )} real) tu cartera rinde menos de lo que retirás: empieza a achicarse y se agota ${
-      ageMode
-        ? `alrededor de los ${depletionAge} años`
-        : `alrededor del año ${result.depletionYear} del retiro`
-    }. Necesitás una tasa de retiro más baja, o más capital.`;
-  } else {
-    statusClass = "status ok";
-    statusText = `${jubilasFrase} y tu cartera (${
-      ALLOCATION_LABELS[inputs.retirementAllocation]
-    }) aguanta el retiro${
-      result.trend === "grow" ? " — de hecho, sigue creciendo" : ""
-    }. Tu ${formatPct(inputs.withdrawalRate)} es sostenible con este rendimiento.`;
-  }
+  // Aportes propios vs. interés compuesto (sobre el saldo al llegar al número).
+  const contributed = result.contributedAtFire;
+  const growth = Math.max(0, result.growthAtFire);
+  const breakdownTotal = contributed + growth;
+  const contributedPct =
+    breakdownTotal > 0 ? (contributed / breakdownTotal) * 100 : 0;
 
   return (
     <section className="calc" id="calculadora">
@@ -213,6 +217,34 @@ export default function RetirementPlanner() {
             <small>Para mostrar tu edad en el gráfico y en los datos de jubilación.</small>
           </div>
 
+          {ageMode && (
+            <div className="field">
+              <label>
+                <span className="label-with-info">
+                  Jubilación objetivo
+                  <InfoTip label="Qué es Coast FIRE">
+                    <strong>Coast FIRE</strong> es el capital que, sin aportar un
+                    peso más, crece solo hasta tu número de retiro para cuando
+                    cumplas esta edad. Si ya lo tenés, podrías dejar de aportar y
+                    aun así llegar.
+                  </InfoTip>
+                </span>
+              </label>
+              <div className="years-input">
+                <input
+                  type="number"
+                  min={currentAge + 1}
+                  max={100}
+                  step={1}
+                  value={inputs.coastTargetAge}
+                  onChange={(e) => set("coastTargetAge", Number(e.target.value))}
+                />
+                <span>años</span>
+              </div>
+              <small>Edad a la que querés jubilarte (para Coast FIRE).</small>
+            </div>
+          )}
+
           <div className="field">
             <label>Inversión inicial</label>
             <div className="money">
@@ -239,6 +271,28 @@ export default function RetirementPlanner() {
                 onChange={(e) => set("monthly", Number(e.target.value))}
               />
             </div>
+          </div>
+
+          <div className="field">
+            <label>
+              <span className="label-with-info">
+                Aumento anual del aporte
+                <InfoTip label="Qué es el aumento anual del aporte">
+                  Cuánto sube tu aporte mensual cada año, en{" "}
+                  <strong>términos reales</strong> (por encima de la inflación).
+                  Útil si esperás aumentos de sueldo. <strong>0</strong> = aporte
+                  constante en poder de compra de hoy.
+                </InfoTip>
+              </span>
+            </label>
+            <PercentInput
+              value={inputs.monthlyGrowth}
+              onChange={(v) => set("monthlyGrowth", v)}
+              step={0.5}
+              max={20}
+              ariaLabel="Aumento anual del aporte"
+            />
+            <small>Crecimiento real de tu aporte por año. 0 = constante.</small>
           </div>
 
           <div className="field">
@@ -280,27 +334,28 @@ export default function RetirementPlanner() {
                 </InfoTip>
               </span>
             </label>
-            <div className="seg">
-              {WITHDRAWAL_OPTIONS.map((w) => (
-                <button
-                  key={w}
-                  className={inputs.withdrawalRate === w ? "active" : ""}
-                  onClick={() => set("withdrawalRate", w)}
-                >
-                  {formatPct(w)}
-                </button>
-              ))}
-              <div className="custom-rate">
-                <span>Otra:</span>
-                <PercentInput
-                  value={inputs.withdrawalRate}
-                  onChange={(v) => set("withdrawalRate", v)}
-                  step={0.1}
-                  max={20}
-                  ariaLabel="Tasa de retiro personalizada"
-                />
-              </div>
-            </div>
+            <SegmentedWithCustom
+              options={WITHDRAWAL_OPTIONS.map((w) => ({
+                value: w,
+                label: formatPct(w),
+              }))}
+              isPresetActive={(w) => !withdrawalCustom && inputs.withdrawalRate === w}
+              onSelectPreset={(w) => {
+                set("withdrawalRate", w);
+                setWithdrawalCustom(false);
+              }}
+              customActive={withdrawalCustom}
+              onSelectCustom={() => setWithdrawalCustom(true)}
+              ariaLabel="Tasa de retiro"
+            >
+              <PercentInput
+                value={inputs.withdrawalRate}
+                onChange={(v) => set("withdrawalRate", v)}
+                step={0.1}
+                max={20}
+                ariaLabel="Tasa de retiro personalizada"
+              />
+            </SegmentedWithCustom>
             <small>% de la cartera que retirás al año. Define tu número de retiro.</small>
           </div>
 
@@ -317,36 +372,26 @@ export default function RetirementPlanner() {
                 </InfoTip>
               </span>
             </label>
-            <div className="seg">
-              {ALLOCATIONS.map((a) => (
-                <button
-                  key={a}
-                  className={inputs.retirementAllocation === a ? "active" : ""}
-                  onClick={() => set("retirementAllocation", a)}
-                >
-                  {ALLOCATION_LABELS[a]}
-                </button>
-              ))}
-              <div className="custom-rate">
-                <button
-                  className={
-                    inputs.retirementAllocation === "custom" ? "active" : ""
-                  }
-                  onClick={() => set("retirementAllocation", "custom")}
-                >
-                  {ALLOCATION_LABELS.custom}
-                </button>
-                {inputs.retirementAllocation === "custom" && (
-                  <PercentInput
-                    value={inputs.customRetirementReturn}
-                    onChange={(v) => set("customRetirementReturn", v)}
-                    step={0.5}
-                    max={30}
-                    ariaLabel="Rendimiento de la cartera personalizada"
-                  />
-                )}
-              </div>
-            </div>
+            <SegmentedWithCustom
+              options={ALLOCATIONS.map((a) => ({
+                value: a,
+                label: ALLOCATION_LABELS[a],
+              }))}
+              isPresetActive={(a) => inputs.retirementAllocation === a}
+              onSelectPreset={(a) => set("retirementAllocation", a)}
+              customActive={inputs.retirementAllocation === "custom"}
+              onSelectCustom={() => set("retirementAllocation", "custom")}
+              customLabel={ALLOCATION_LABELS.custom}
+              ariaLabel="Cartera en el retiro"
+            >
+              <PercentInput
+                value={inputs.customRetirementReturn}
+                onChange={(v) => set("customRetirementReturn", v)}
+                step={0.5}
+                max={30}
+                ariaLabel="Rendimiento de la cartera personalizada"
+              />
+            </SegmentedWithCustom>
             <small>
               {ALLOCATION_LABELS[inputs.retirementAllocation]} · ~
               {formatPct(result.retirementReturn)} real —{" "}
@@ -390,9 +435,49 @@ export default function RetirementPlanner() {
             <span>En el retiro tu dinero</span>
             <strong>{retirementSummary}</strong>
           </div>
+          {coastApplies && (
+            <div className="stat">
+              <span>Coast FIRE · jubilación a los {inputs.coastTargetAge}</span>
+              <strong>
+                {isFinite(coast) ? money.format(Math.round(coast)) : "—"}
+              </strong>
+            </div>
+          )}
         </section>
 
-        <div className={statusClass}>{statusText}</div>
+        {result.reached && breakdownTotal > 0 && (
+          <section
+            className="breakdown"
+            aria-label="Aportes propios contra interés compuesto"
+          >
+            <div className="breakdown-bar">
+              <span
+                style={{
+                  width: `${contributedPct}%`,
+                  background: COLORS.accumulation,
+                }}
+              />
+              <span
+                style={{
+                  width: `${100 - contributedPct}%`,
+                  background: COLORS.grow,
+                }}
+              />
+            </div>
+            <div className="breakdown-legend">
+              <span>
+                <i style={{ background: COLORS.accumulation }} />
+                Aportaste {money.format(Math.round(contributed))}
+              </span>
+              <span>
+                <i style={{ background: COLORS.grow }} />
+                El interés generó {money.format(Math.round(growth))}
+              </span>
+            </div>
+          </section>
+        )}
+
+        <StatusBanner kind={summary.kind}>{summary.verdict}</StatusBanner>
 
         <section className="chart-card">
           <div className="legend">
@@ -412,7 +497,7 @@ export default function RetirementPlanner() {
             </span>
           </div>
 
-          <div style={{ width: "100%", height: 360 }}>
+          <div className="chart-wrap">
             <ResponsiveContainer>
               <ComposedChart
                 data={chartData}

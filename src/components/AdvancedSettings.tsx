@@ -3,10 +3,17 @@ import {
   ALLOCATIONS,
   ALLOCATION_LABELS,
   type PresetAllocation,
+  type ReturnMode,
   type Assumptions,
 } from "../finance";
 import { CURRENCIES } from "../format";
 import { PercentInput } from "./PercentInput";
+import { SegmentedControl } from "./SegmentedControl";
+
+const RETURN_MODE_OPTIONS: { value: ReturnMode; label: string }[] = [
+  { value: "real", label: "Reales" },
+  { value: "nominal", label: "Nominales" },
+];
 
 interface Props {
   assumptions: Assumptions;
@@ -66,20 +73,12 @@ export function AdvancedSettings({
 
           <div className="field">
             <label>Cómo ingresás los rendimientos</label>
-            <div className="seg">
-              <button
-                className={!nominal ? "active" : ""}
-                onClick={() => patch("returnMode", "real")}
-              >
-                Reales
-              </button>
-              <button
-                className={nominal ? "active" : ""}
-                onClick={() => patch("returnMode", "nominal")}
-              >
-                Nominales
-              </button>
-            </div>
+            <SegmentedControl
+              options={RETURN_MODE_OPTIONS}
+              value={assumptions.returnMode}
+              onChange={(v) => patch("returnMode", v)}
+              ariaLabel="Cómo ingresás los rendimientos"
+            />
             <small>
               {nominal
                 ? "Cargás rendimientos nominales y restamos la inflación."

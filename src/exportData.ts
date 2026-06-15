@@ -21,9 +21,14 @@ import {
   type PlanInputs,
 } from "./finance";
 import { CURRENCIES, DEFAULT_CURRENCY } from "./format";
+import { planFileName } from "./dateStamp";
 
-/** Versión del esquema del archivo. Subila si cambia la forma de los datos. */
-export const EXPORT_VERSION = 1;
+/**
+ * Versión del esquema del archivo. Subila si cambia la forma de los datos.
+ * v2: se agregaron `monthlyGrowth` y `coastTargetAge` a los inputs. Los archivos
+ * v1 siguen cargando: los campos nuevos caen a sus valores por defecto.
+ */
+export const EXPORT_VERSION = 2;
 
 const APP_MARKER = "planificador-fire";
 
@@ -61,11 +66,7 @@ export function buildExportFile(data: PlanData): ExportFile {
 
 /** Nombre de archivo con fecha: `plan-fire-2026-06-14.json`. */
 export function exportFileName(date = new Date()): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const stamp = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-    date.getDate()
-  )}`;
-  return `plan-fire-${stamp}.json`;
+  return planFileName("json", date);
 }
 
 /** Genera el JSON y dispara la descarga en el navegador. */
@@ -155,6 +156,10 @@ function sanitizeInputs(v: unknown): PlanInputs {
   return {
     initial: Math.max(0, num(o.initial, DEFAULT_INPUTS.initial)),
     monthly: Math.max(0, num(o.monthly, DEFAULT_INPUTS.monthly)),
+    monthlyGrowth: Math.max(
+      -0.5,
+      Math.min(1, num(o.monthlyGrowth, DEFAULT_INPUTS.monthlyGrowth))
+    ),
     monthlySpend: Math.max(0, num(o.monthlySpend, DEFAULT_INPUTS.monthlySpend)),
     withdrawalRate: Math.max(
       0,
@@ -166,6 +171,9 @@ function sanitizeInputs(v: unknown): PlanInputs {
     customRetirementReturn: num(
       o.customRetirementReturn,
       DEFAULT_INPUTS.customRetirementReturn
+    ),
+    coastTargetAge: clampAge(
+      num(o.coastTargetAge, DEFAULT_INPUTS.coastTargetAge)
     ),
   };
 }

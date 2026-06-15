@@ -10,6 +10,7 @@
 import type { jsPDF } from "jspdf";
 import {
   computeLifecycle,
+  coastNumber,
   ALLOCATION_LABELS,
   type LifecycleResult,
 } from "./finance";
@@ -21,14 +22,18 @@ import {
 } from "./format";
 import type { PlanData } from "./exportData";
 import { SITE } from "./siteConfig";
+import { planFileName } from "./dateStamp";
+import { CHART } from "./palette";
+import { buildChartSeries } from "./chartSeries";
+import { buildPlanSummary } from "./planSummary";
 
 const INK = "#211D16";
 const MUTED = "#6E665A";
 const LINE = "#D8D1C2";
-const ACCENT = "#1E7A52";
-const BLUE = "#2B5B8A";
-const RED = "#B23A2E";
-const GOLD = "#B07D18";
+const ACCENT = CHART.grow;
+const BLUE = CHART.accumulation;
+const RED = CHART.decline;
+const GOLD = CHART.target;
 const CARD = "#FBF7EF";
 
 type RGB = [number, number, number];
@@ -44,11 +49,6 @@ const ink = (d: jsPDF, hex: string) => d.setTextColor(...rgb(hex));
 const stroke = (d: jsPDF, hex: string) => d.setDrawColor(...rgb(hex));
 const fill = (d: jsPDF, hex: string) => d.setFillColor(...rgb(hex));
 
-function dateStamp(date = new Date()): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
 export async function generatePlanPdf(plan: PlanData): Promise<void> {
   const { jsPDF: JsPDF } = await import("jspdf");
   const { inputs, assumptions, currency, currentAge } = plan;
@@ -58,43 +58,21 @@ export async function generatePlanPdf(plan: PlanData): Promise<void> {
   const axisFmt = makeAxisFormatter(currency);
   const fmt = (n: number) => money.format(Math.round(n));
 
-  const ageMode = currentAge > 0;
-  const retirementAge = currentAge + result.accumulationYears;
-  const depletionAge =
-    result.depletionYear != null ? retirementAge + result.depletionYear : null;
+  const { ageMode, retirementAge, retirementSummary, verdict } = buildPlanSummary(
+    result,
+    inputs,
+    assumptions,
+    currentAge,
+    { money: fmt, pct: formatPct },
+    "pdf"
+  );
 
-  const jubilas = ageMode
-    ? `Te jubilás a los ${retirementAge} años`
-    : `Te jubilás al año ${result.accumulationYears}`;
-
-  const retirementSummary = !result.reached
-    ? "No llegás"
-    : result.trend === "decline"
-    ? ageMode
-      ? `Se agota a los ~${depletionAge} años`
-      : `Se agota ~año ${result.depletionYear}`
-    : "Dura indefinidamente";
-
-  let verdict: string;
-  if (!result.reached) {
-    verdict = `Con ${fmt(inputs.monthly)}/mes no alcanzás tu número (${fmt(
-      result.fireNumber
-    )}) en ${assumptions.maxAccumulationYears} años. Subí el aporte o bajá el gasto.`;
-  } else if (result.trend === "decline") {
-    verdict = `${jubilas}, pero con ${
-      ALLOCATION_LABELS[inputs.retirementAllocation]
-    } (~${formatPct(
-      result.retirementReturn
-    )} real) tu cartera rinde menos de lo que retirás y se agota ${
-      ageMode ? `alrededor de los ${depletionAge} años` : `~año ${result.depletionYear}`
-    }. Bajá la tasa de retiro o juntá más capital.`;
-  } else {
-    verdict = `${jubilas} y tu cartera (${
-      ALLOCATION_LABELS[inputs.retirementAllocation]
-    }) aguanta el retiro${
-      result.trend === "grow" ? " — incluso sigue creciendo" : ""
-    }. Tu ${formatPct(inputs.withdrawalRate)} es sostenible con este rendimiento.`;
-  }
+  const coastApplies = ageMode && inputs.coastTargetAge > currentAge;
+  const coast = coastNumber(
+    result.fireNumber,
+    result.accumulationReturn,
+    inputs.coastTargetAge - currentAge
+  );
 
   // ----------------------------------------------------------------- documento
   const doc = new JsPDF({ unit: "pt", format: "a4" });
@@ -170,7 +148,30 @@ export async function generatePlanPdf(plan: PlanData): Promise<void> {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9.5);
   doc.text(verdictLines, M + 12, y + 15);
-  y += boxH + 22;
+  y += boxH + 16;
+
+  // Resultados secundarios: aportes vs. interés y Coast FIRE, en una línea tenue.
+  const extras: string[] = [];
+  if (result.reached && result.contributedAtFire + result.growthAtFire > 0) {
+    extras.push(
+      `Aportaste ${fmt(result.contributedAtFire)}; el interés generó ${fmt(
+        Math.max(0, result.growthAtFire)
+      )}.`
+    );
+  }
+  if (coastApplies && isFinite(coast)) {
+    extras.push(`Coast FIRE a los ${inputs.coastTargetAge}: ${fmt(coast)}.`);
+  }
+  if (extras.length > 0) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    ink(doc, MUTED);
+    const line = doc.splitTextToSize(extras.join(" "), CW);
+    doc.text(line, M, y);
+    y += line.length * 11 + 14;
+  } else {
+    y += 6;
+  }
 
   // Dos columnas: Tus datos | Supuestos.
   const colGap = 28;
@@ -182,6 +183,11 @@ export async function generatePlanPdf(plan: PlanData): Promise<void> {
     ["Edad actual", ageMode ? `${currentAge} años` : "—"],
     ["Inversión inicial", fmt(inputs.initial)],
     ["Aporte mensual", fmt(inputs.monthly)],
+    ...(inputs.monthlyGrowth > 0
+      ? ([
+          ["Aumento del aporte", `${formatPct(inputs.monthlyGrowth)} real/año`],
+        ] as [string, string][])
+      : []),
     ["Gasto mensual hoy", fmt(inputs.monthlySpend)],
     ["Tasa de retiro", formatPct(inputs.withdrawalRate)],
     [
@@ -229,7 +235,7 @@ export async function generatePlanPdf(plan: PlanData): Promise<void> {
   );
   doc.text(foot, M, H - M - foot.length * 9);
 
-  doc.save(`plan-fire-${dateStamp()}.pdf`);
+  doc.save(planFileName("pdf"));
 }
 
 // ------------------------------------------------------------------- helpers ---
@@ -321,19 +327,18 @@ function drawChart(
   w: number,
   h: number
 ): void {
-  const accYears = result.accumulationYears;
-  const retLen =
-    result.retirementSeries.length > 0 ? result.retirementSeries.length - 1 : 0;
-  const totalYears = Math.max(1, accYears + retLen);
+  const series = buildChartSeries(result);
+  const accYears = series.accYears;
+  const totalYears = Math.max(1, series.totalYears);
 
   // Puntos (edad/año, valor) de cada fase.
-  const acc: [number, number][] = result.accumulationSeries.map((v, k) => [
-    currentAge + k,
-    v,
+  const acc: [number, number][] = series.accumulation.map(({ yearOffset, value }) => [
+    currentAge + yearOffset,
+    value,
   ]);
-  const ret: [number, number][] = result.retirementSeries.map((v, j) => [
-    currentAge + accYears + j,
-    v,
+  const ret: [number, number][] = series.retirement.map(({ yearOffset, value }) => [
+    currentAge + yearOffset,
+    value,
   ]);
 
   const xMin = currentAge;
