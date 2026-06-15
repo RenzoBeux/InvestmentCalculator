@@ -44,6 +44,7 @@ import { buildChartSeries } from "./chartSeries";
 import { buildPlanSummary } from "./planSummary";
 import { AdvancedSettings } from "./components/AdvancedSettings";
 import { PercentInput } from "./components/PercentInput";
+import { MoneyInput } from "./components/MoneyInput";
 import { InfoTip } from "./components/InfoTip";
 import { DataActions } from "./components/DataActions";
 import { SegmentedControl } from "./components/SegmentedControl";
@@ -401,16 +402,13 @@ export default function RetirementPlanner() {
           ) : (
             <div className="field">
               <label>Inversión inicial</label>
-              <div className="money">
-                <span>{symbol}</span>
-                <input
-                  type="number"
-                  min={0}
-                  step={500}
-                  value={inputs.initial}
-                  onChange={(e) => set("initial", Number(e.target.value))}
-                />
-              </div>
+              <MoneyInput
+                value={inputs.initial}
+                onChange={(v) => set("initial", v)}
+                symbol={symbol}
+                step={500}
+                ariaLabel="Inversión inicial"
+              />
             </div>
           )}
 
@@ -419,16 +417,13 @@ export default function RetirementPlanner() {
           ) : (
             <div className="field">
               <label>Aporte mensual</label>
-              <div className="money">
-                <span>{symbol}</span>
-                <input
-                  type="number"
-                  min={0}
-                  step={100}
-                  value={inputs.monthly}
-                  onChange={(e) => set("monthly", Number(e.target.value))}
-                />
-              </div>
+              <MoneyInput
+                value={inputs.monthly}
+                onChange={(v) => set("monthly", v)}
+                symbol={symbol}
+                step={100}
+                ariaLabel="Aporte mensual"
+              />
             </div>
           )}
 
@@ -467,16 +462,13 @@ export default function RetirementPlanner() {
                 </InfoTip>
               </span>
             </label>
-            <div className="money">
-              <span>{symbol}</span>
-              <input
-                type="number"
-                min={0}
-                step={100}
-                value={inputs.monthlySpend}
-                onChange={(e) => set("monthlySpend", Number(e.target.value))}
-              />
-            </div>
+            <MoneyInput
+              value={inputs.monthlySpend}
+              onChange={(v) => set("monthlySpend", v)}
+              symbol={symbol}
+              step={100}
+              ariaLabel="Gasto mensual hoy"
+            />
           </div>
 
           <div className="field field-wide">
