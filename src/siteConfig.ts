@@ -8,7 +8,7 @@ export const SITE = {
   shortName: "FIRE",
   tagline: "Calculá cuánto necesitás para vivir de tus inversiones",
   /** Reemplazá con la URL de tu repositorio (o dejá vacío para ocultar el enlace). */
-  repoUrl: "https://github.com/",
+  repoUrl: "https://github.com/RenzoBeux/InvestmentCalculator",
   /** Página personal del autor. */
   authorUrl: "https://renzobeux.dev",
 };

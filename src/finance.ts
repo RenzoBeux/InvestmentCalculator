@@ -490,23 +490,53 @@ export function computeLifecycle(
   // El saldo evoluciona como bal_{n+1} = bal_n * (1 + r) - gasto.
   // Su punto de equilibrio es gasto / r: por encima crece, por debajo se agota.
   const start = accumulationSeries[accumulationSeries.length - 1];
-  const fixedPoint = retirementReturn > 0 ? annualSpend / retirementReturn : Infinity;
 
   let trend: Trend;
   let depletionYear: number | null = null;
 
-  if (start > fixedPoint + 1) {
-    trend = "grow";
-  } else if (Math.abs(start - fixedPoint) <= 1) {
-    trend = "flat";
+  if (annualSpend <= 0) {
+    // Sin retiros (gasto 0) la cartera no se agota nunca.
+    trend = retirementReturn > 0 ? "grow" : "flat";
+  } else if (retirementReturn > 0) {
+    // Con rendimiento positivo hay un punto de equilibrio (gasto / r): por
+    // encima la cartera crece sola, por debajo se va agotando.
+    const fixedPoint = annualSpend / retirementReturn;
+    if (start > fixedPoint + 1) {
+      trend = "grow";
+    } else if (Math.abs(start - fixedPoint) <= 1) {
+      trend = "flat";
+    } else {
+      trend = "decline";
+      depletionYear = Math.ceil(
+        Math.log(fixedPoint / (fixedPoint - start)) / Math.log(1 + retirementReturn)
+      );
+    }
   } else {
+    // Rendimiento real <= 0: la cartera no genera nada para cubrir el gasto, así
+    // que siempre se agota. La fórmula cerrada sigue valiendo con el punto de
+    // equilibrio real (negativo); en r = 0 el agotamiento es lineal.
     trend = "decline";
-    depletionYear = Math.ceil(
-      Math.log(fixedPoint / (fixedPoint - start)) / Math.log(1 + retirementReturn)
-    );
+    if (retirementReturn === 0) {
+      depletionYear = Math.ceil(start / annualSpend);
+    } else if (retirementReturn > -1) {
+      const fixedPoint = annualSpend / retirementReturn; // negativo
+      depletionYear = Math.ceil(
+        Math.log(fixedPoint / (fixedPoint - start)) / Math.log(1 + retirementReturn)
+      );
+    } else {
+      // 1 + r <= 0 (rendimiento <= -100%): degenerado, inalcanzable desde la UI.
+      depletionYear = Math.ceil(start / annualSpend);
+    }
   }
 
-  const chartLimit = Math.min(chartYears, depletionYear ?? chartYears);
+  // Red de seguridad: ningún camino debe dejar un año de agotamiento no finito
+  // (evita que un NaN/Infinity se filtre al gráfico o al texto del veredicto).
+  if (depletionYear != null && !Number.isFinite(depletionYear)) {
+    depletionYear = null;
+  }
+
+  const chartLimit =
+    depletionYear != null ? Math.min(chartYears, depletionYear) : chartYears;
   const retirementSeries: number[] = [start];
   let retBalance = start;
   for (let year = 1; year <= chartLimit; year++) {

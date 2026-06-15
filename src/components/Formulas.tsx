@@ -33,7 +33,7 @@ const GROUPS: Group[] = [
             <V>número</V> = (<V>gasto mensual</V> × 12) ÷ <V>tasa de retiro</V>
           </>
         ),
-        desc: "El capital que, a tu tasa de retiro, genera tu gasto anual a perpetuidad. A 4%, equivale a 25 veces tu gasto anual.",
+        desc: "El capital que, a tu tasa de retiro, cubre tu gasto anual. A 4% equivale a 25 veces tu gasto anual. Que dure sin agotarse depende de que tu cartera rinda al menos tu tasa de retiro — fijate el veredicto.",
       },
       {
         name: "Coast FIRE",
