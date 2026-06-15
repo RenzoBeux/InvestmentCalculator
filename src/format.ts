@@ -25,6 +25,7 @@ export const CURRENCIES: CurrencyOption[] = [
   { code: "MXN", symbol: "MX$", label: "Peso mexicano", locale: "es-MX" },
   { code: "BRL", symbol: "R$", label: "Real brasileño", locale: "pt-BR" },
   { code: "CLP", symbol: "CLP$", label: "Peso chileno", locale: "es-CL" },
+  { code: "UYU", symbol: "$U", label: "Peso uruguayo", locale: "es-UY" },
 ];
 
 export const DEFAULT_CURRENCY = "USD";
