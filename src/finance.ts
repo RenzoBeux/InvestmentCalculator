@@ -1,36 +1,75 @@
 /**
  * Lógica financiera del planificador de retiro.
  *
- * Todo se calcula en términos REALES (dólares de hoy): el rendimiento ya viene
- * con la inflación descontada y el gasto se mantiene constante en poder de compra.
+ * El modelo trabaja en términos REALES (poder de compra de hoy): el gasto se
+ * mantiene constante y los rendimientos ya vienen con la inflación descontada.
  * Es la única forma honesta de proyectar varias décadas.
  *
- * Este archivo es puro y tipado: no toca el DOM ni React, así que es el lugar
- * para mejorar el modelo (ver README → "Ideas para mejorarlo").
+ * Los supuestos ya no están hardcodeados: viven en `Assumptions` y el usuario
+ * los puede editar desde la UI (panel "Ajustes avanzados"). Quien quiera tocar
+ * el modelo en sí —no solo los números— lo hace en `computeLifecycle`.
+ *
+ * Este archivo es puro y tipado: no toca el DOM ni React.
  */
 
-export type Allocation = "aggressive" | "balanced" | "conservative";
+/** Las tres carteras con un rendimiento predefinido (editable en ajustes). */
+export type PresetAllocation = "aggressive" | "balanced" | "conservative";
 
-/** Rendimiento real anual mientras acumulás (se asume 100% en el ETF global). */
-export const ACCUMULATION_REAL_RETURN = 0.06;
+/** Cartera elegida en el retiro: una de las predefinidas o una personalizada. */
+export type Allocation = PresetAllocation | "custom";
 
-/** Rendimiento real anual durante el retiro, según la cartera elegida. */
-export const RETIREMENT_REAL_RETURNS: Record<Allocation, number> = {
-  aggressive: 0.06, // 100% acciones
-  balanced: 0.045, // 60 / 40
-  conservative: 0.035, // 40 / 60
-};
+/** Cómo ingresa el usuario los rendimientos. */
+export type ReturnMode = "real" | "nominal";
 
 export const ALLOCATION_LABELS: Record<Allocation, string> = {
   aggressive: "100% acciones",
   balanced: "60 / 40",
   conservative: "40 / 60",
+  custom: "Personalizada",
 };
 
-const ACCUMULATION_MAX_YEARS = 60;
-const RETIREMENT_CHART_YEARS = 45;
+/** Solo las carteras predefinidas; "custom" se maneja aparte. */
+export const ALLOCATIONS: PresetAllocation[] = ["aggressive", "balanced", "conservative"];
 
 export type Trend = "grow" | "flat" | "decline";
+
+/**
+ * Supuestos del modelo. Todos configurables desde la UI.
+ *
+ * Si `returnMode` es "nominal", los rendimientos de abajo se interpretan como
+ * nominales y se convierten a reales descontando `inflation`. Si es "real", se
+ * usan tal cual (la inflación se ignora).
+ */
+export interface Assumptions {
+  returnMode: ReturnMode;
+  /** Inflación anual asumida (solo se usa en modo "nominal"). */
+  inflation: number;
+  /** Rendimiento anual mientras acumulás (100% en el ETF global). */
+  accumulationReturn: number;
+  /** Rendimiento anual durante el retiro, según la cartera predefinida elegida. */
+  retirementReturns: Record<PresetAllocation, number>;
+  /** Horizonte máximo de acumulación a simular (años). */
+  maxAccumulationYears: number;
+  /** Años de retiro a proyectar en el gráfico. */
+  retirementChartYears: number;
+}
+
+export const DEFAULT_ASSUMPTIONS: Assumptions = {
+  returnMode: "real",
+  inflation: 0.03,
+  accumulationReturn: 0.06,
+  retirementReturns: {
+    aggressive: 0.06, // 100% acciones
+    balanced: 0.045, // 60 / 40
+    conservative: 0.035, // 40 / 60
+  },
+  maxAccumulationYears: 60,
+  retirementChartYears: 45,
+};
+
+// Compatibilidad: nombres históricos que apuntan a los valores por defecto.
+export const ACCUMULATION_REAL_RETURN = DEFAULT_ASSUMPTIONS.accumulationReturn;
+export const RETIREMENT_REAL_RETURNS = DEFAULT_ASSUMPTIONS.retirementReturns;
 
 export interface PlanInputs {
   /** Inversión inicial, en dólares de hoy. */
@@ -43,7 +82,27 @@ export interface PlanInputs {
   withdrawalRate: number;
   /** Asignación de la cartera durante el retiro. */
   retirementAllocation: Allocation;
+  /**
+   * Rendimiento de la cartera cuando `retirementAllocation` es "custom".
+   * Se interpreta según `returnMode` (real o nominal), igual que los demás.
+   */
+  customRetirementReturn: number;
 }
+
+export const DEFAULT_INPUTS: PlanInputs = {
+  initial: 6000,
+  monthly: 1000,
+  monthlySpend: 2000,
+  withdrawalRate: 0.04,
+  retirementAllocation: "balanced",
+  customRetirementReturn: 0.05,
+};
+
+/**
+ * Edad inicial por defecto. 0 NO es un default neutro: la UI trata `currentAge`
+ * en 0 como "sin edad cargada", así que el valor por defecto real es 30.
+ */
+export const DEFAULT_AGE = 30;
 
 export interface LifecycleResult {
   /** Cartera objetivo = gasto anual / tasa de retiro. */
@@ -54,6 +113,8 @@ export interface LifecycleResult {
   accumulationYears: number;
   /** Saldo al final de cada año de acumulación (índice 0..accumulationYears). */
   accumulationSeries: number[];
+  /** Rendimiento real aplicado en la acumulación. */
+  accumulationReturn: number;
   /** Rendimiento real aplicado en el retiro. */
   retirementReturn: number;
   /** Saldo al inicio del retiro y al final de cada año (índice 0..n). */
@@ -62,6 +123,15 @@ export interface LifecycleResult {
   trend: Trend;
   /** Años dentro del retiro hasta agotarse (solo si la tendencia es "decline"). */
   depletionYear: number | null;
+}
+
+/**
+ * Convierte un rendimiento al equivalente real según el modo elegido.
+ * En modo nominal: r_real = (1 + r_nom) / (1 + inflación) − 1 (ecuación de Fisher).
+ */
+export function effectiveRealReturn(annualReturn: number, assumptions: Assumptions): number {
+  if (assumptions.returnMode === "real") return annualReturn;
+  return (1 + annualReturn) / (1 + Math.max(0, assumptions.inflation)) - 1;
 }
 
 /** Número de retiro: cuánto capital necesitás para vivir de la cartera. */
@@ -74,22 +144,35 @@ export function fireNumber(monthlySpend: number, withdrawalRate: number): number
  * Simula el ciclo completo: acumulación (capitalización mensual) hasta el número
  * de retiro, y luego el retiro (retiros anuales) con la cartera elegida.
  */
-export function computeLifecycle(inputs: PlanInputs): LifecycleResult {
+export function computeLifecycle(
+  inputs: PlanInputs,
+  assumptions: Assumptions = DEFAULT_ASSUMPTIONS
+): LifecycleResult {
   const initial = Math.max(0, inputs.initial);
   const monthly = Math.max(0, inputs.monthly);
   const annualSpend = Math.max(0, inputs.monthlySpend) * 12;
   const target = fireNumber(inputs.monthlySpend, inputs.withdrawalRate);
-  const retirementReturn = RETIREMENT_REAL_RETURNS[inputs.retirementAllocation];
+
+  const accumulationReturn = effectiveRealReturn(assumptions.accumulationReturn, assumptions);
+  // La cartera "custom" usa el rendimiento que el usuario cargó a mano; las
+  // demás lo toman de los supuestos según la mezcla elegida.
+  const retirementRaw =
+    inputs.retirementAllocation === "custom"
+      ? inputs.customRetirementReturn
+      : assumptions.retirementReturns[inputs.retirementAllocation];
+  const retirementReturn = effectiveRealReturn(retirementRaw, assumptions);
+  const maxYears = Math.max(1, Math.round(assumptions.maxAccumulationYears));
+  const chartYears = Math.max(1, Math.round(assumptions.retirementChartYears));
 
   // --- Fase de acumulación ---
-  const monthlyRate = ACCUMULATION_REAL_RETURN / 12;
+  const monthlyRate = accumulationReturn / 12;
   const accumulationSeries: number[] = [initial];
   let balance = initial;
   let accumulationYears = 0;
   let reached = balance >= target;
 
   if (!reached) {
-    for (let month = 1; month <= ACCUMULATION_MAX_YEARS * 12; month++) {
+    for (let month = 1; month <= maxYears * 12; month++) {
       balance = balance * (1 + monthlyRate) + monthly;
       if (month % 12 === 0) {
         accumulationSeries.push(balance);
@@ -108,6 +191,7 @@ export function computeLifecycle(inputs: PlanInputs): LifecycleResult {
       reached: false,
       accumulationYears: accumulationSeries.length - 1,
       accumulationSeries,
+      accumulationReturn,
       retirementReturn,
       retirementSeries: [],
       trend: "decline",
@@ -135,7 +219,7 @@ export function computeLifecycle(inputs: PlanInputs): LifecycleResult {
     );
   }
 
-  const chartLimit = Math.min(RETIREMENT_CHART_YEARS, depletionYear ?? RETIREMENT_CHART_YEARS);
+  const chartLimit = Math.min(chartYears, depletionYear ?? chartYears);
   const retirementSeries: number[] = [start];
   let retBalance = start;
   for (let year = 1; year <= chartLimit; year++) {
@@ -152,6 +236,7 @@ export function computeLifecycle(inputs: PlanInputs): LifecycleResult {
     reached: true,
     accumulationYears,
     accumulationSeries,
+    accumulationReturn,
     retirementReturn,
     retirementSeries,
     trend,
