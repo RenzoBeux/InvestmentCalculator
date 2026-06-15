@@ -9,7 +9,7 @@ export function Footer() {
       <div className="footer-inner">
         <div className="footer-brand">
           <span className="brand-mark">
-            <BrandMark size={20} />
+            <BrandMark />
           </span>
           <div>
             <strong>{SITE.brand}</strong>
