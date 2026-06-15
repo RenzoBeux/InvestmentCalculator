@@ -31,6 +31,81 @@ export const ALLOCATION_LABELS: Record<Allocation, string> = {
 /** Solo las carteras predefinidas; "custom" se maneja aparte. */
 export const ALLOCATIONS: PresetAllocation[] = ["aggressive", "balanced", "conservative"];
 
+/**
+ * Perfil de retiro: un atajo que fija de una vez la tasa de retiro y la cartera,
+ * ordenado de más a menos riesgo. Es una capa de presentación sobre esos dos
+ * campos —no se guarda aparte—: el perfil activo se deriva de los valores
+ * actuales con `deriveProfile`. "custom" (Personalizado) es "no coincide con
+ * ningún preset, lo elige el usuario a mano".
+ */
+export type RetirementProfile =
+  | "aggressive"
+  | "moderate"
+  | "conservative"
+  | "veryConservative"
+  | "custom";
+
+export const RETIREMENT_PROFILE_LABELS: Record<RetirementProfile, string> = {
+  aggressive: "Arriesgado",
+  moderate: "Moderado",
+  conservative: "Conservador",
+  veryConservative: "Muy conservador",
+  custom: "Personalizado",
+};
+
+/** Los valores que aplica cada perfil predefinido. */
+export interface ProfilePreset {
+  withdrawalRate: number;
+  allocation: PresetAllocation;
+}
+
+/**
+ * Mapa perfil → (tasa de retiro, cartera). "moderate" coincide con los valores
+ * por defecto (4% + 60/40), así que el plan por defecto arranca en "Moderado".
+ */
+export const RETIREMENT_PROFILES: Record<
+  Exclude<RetirementProfile, "custom">,
+  ProfilePreset
+> = {
+  aggressive: { withdrawalRate: 0.04, allocation: "aggressive" },
+  moderate: { withdrawalRate: 0.04, allocation: "balanced" },
+  conservative: { withdrawalRate: 0.035, allocation: "conservative" },
+  veryConservative: { withdrawalRate: 0.03, allocation: "conservative" },
+};
+
+/** Orden de los botones, de más a menos riesgo; "custom" va al final. */
+export const RETIREMENT_PROFILE_ORDER: RetirementProfile[] = [
+  "aggressive",
+  "moderate",
+  "conservative",
+  "veryConservative",
+  "custom",
+];
+
+/**
+ * Deriva el perfil activo a partir de los valores actuales. Si la tasa se cargó
+ * a mano, la cartera es "custom", o la combinación no coincide con ningún preset,
+ * el perfil es "custom".
+ */
+export function deriveProfile(
+  withdrawalRate: number,
+  allocation: Allocation,
+  withdrawalIsCustom: boolean
+): RetirementProfile {
+  if (withdrawalIsCustom || allocation === "custom") return "custom";
+  for (const key of RETIREMENT_PROFILE_ORDER) {
+    if (key === "custom") continue;
+    const preset = RETIREMENT_PROFILES[key];
+    if (
+      preset.allocation === allocation &&
+      Math.abs(preset.withdrawalRate - withdrawalRate) < 1e-9
+    ) {
+      return key;
+    }
+  }
+  return "custom";
+}
+
 export type Trend = "grow" | "flat" | "decline";
 
 /**

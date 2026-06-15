@@ -15,14 +15,19 @@ import {
   coastNumber,
   resolveSolve,
   applySolve,
+  deriveProfile,
   ALLOCATION_LABELS,
   ALLOCATIONS,
+  RETIREMENT_PROFILES,
+  RETIREMENT_PROFILE_LABELS,
+  RETIREMENT_PROFILE_ORDER,
   DEFAULT_AGE,
   DEFAULT_ASSUMPTIONS,
   DEFAULT_INPUTS,
   type Allocation,
   type Assumptions,
   type PlanInputs,
+  type RetirementProfile,
   type SolveFor,
 } from "./finance";
 import {
@@ -75,6 +80,14 @@ const ALLOCATION_NOTES: Record<Allocation, string> = {
 /** ¿La tasa de retiro cargada no es uno de los presets? Entonces es personalizada. */
 const isCustomWithdrawal = (rate: number) => !WITHDRAWAL_OPTIONS.includes(rate);
 
+/** Perfil de retiro derivado de un set de inputs (tasa de retiro + cartera). */
+const profileFor = (i: PlanInputs): RetirementProfile =>
+  deriveProfile(
+    i.withdrawalRate,
+    i.retirementAllocation,
+    isCustomWithdrawal(i.withdrawalRate)
+  );
+
 export default function RetirementPlanner() {
   const [inputs, setInputs] = usePersistedState<PlanInputs>(
     "fire.inputs",
@@ -97,6 +110,13 @@ export default function RetirementPlanner() {
   // presets o el input personalizado. Se inicializa según el valor cargado.
   const [withdrawalCustom, setWithdrawalCustom] = useState(() =>
     isCustomWithdrawal(inputs.withdrawalRate)
+  );
+
+  // El "perfil de retiro" es un atajo que fija a la vez la tasa de retiro y la
+  // cartera. No se persiste aparte: se deriva de esos valores (igual que el flag
+  // de arriba). Con un preset ocultamos los controles finos; "custom" los revela.
+  const [profile, setProfile] = useState<RetirementProfile>(() =>
+    profileFor(inputs)
   );
 
   const { dark } = useTheme();
@@ -132,12 +152,27 @@ export default function RetirementPlanner() {
     setInputs((prev) => ({ ...prev, [key]: value }));
   }
 
+  // Elegir un perfil fija de una vez la tasa de retiro y la cartera.
+  // "Personalizado" no toca los valores: solo revela los controles para editarlos.
+  function selectProfile(p: RetirementProfile) {
+    setProfile(p);
+    if (p === "custom") return;
+    const preset = RETIREMENT_PROFILES[p];
+    setWithdrawalCustom(false);
+    setInputs((prev) => ({
+      ...prev,
+      withdrawalRate: preset.withdrawalRate,
+      retirementAllocation: preset.allocation,
+    }));
+  }
+
   function resetAll() {
     setInputs(DEFAULT_INPUTS);
     setAssumptions(DEFAULT_ASSUMPTIONS);
     setCurrency(DEFAULT_CURRENCY);
     setCurrentAge(DEFAULT_AGE);
     setWithdrawalCustom(isCustomWithdrawal(DEFAULT_INPUTS.withdrawalRate));
+    setProfile(profileFor(DEFAULT_INPUTS));
   }
 
   // Todo lo que el usuario configuró, listo para exportar a un archivo.
@@ -149,6 +184,7 @@ export default function RetirementPlanner() {
     setCurrency(data.currency);
     setCurrentAge(data.currentAge);
     setWithdrawalCustom(isCustomWithdrawal(data.inputs.withdrawalRate));
+    setProfile(profileFor(data.inputs));
   }
 
   // Si la URL trae un plan compartido (#plan=...), ofrecemos cargarlo y limpiamos
@@ -443,87 +479,131 @@ export default function RetirementPlanner() {
           <div className="field field-wide">
             <label>
               <span className="label-with-info">
-                Tasa de retiro
-                <InfoTip label="Qué es la tasa de retiro">
-                  Es el porcentaje de tu cartera que retirás cada año para vivir.
-                  La <strong>regla del 4%</strong> sugiere que retirar ~4% anual
-                  es históricamente sostenible. Más baja = más margen, pero
-                  necesitás más capital; más alta = menos capital, pero más
-                  riesgo de quedarte corto. Tu número de retiro = gasto anual ÷
-                  tasa.
+                Perfil de retiro
+                <InfoTip label="Qué es el perfil de retiro">
+                  Un atajo que fija de una vez tu <strong>tasa de retiro</strong>{" "}
+                  y tu <strong>cartera en el retiro</strong>, ordenado de más a
+                  menos riesgo. Elegí <strong>Personalizado</strong> para ajustar
+                  cada uno a mano.
                 </InfoTip>
               </span>
             </label>
-            <SegmentedWithCustom
-              options={WITHDRAWAL_OPTIONS.map((w) => ({
-                value: w,
-                label: formatPct(w),
+            <SegmentedControl
+              options={RETIREMENT_PROFILE_ORDER.map((p) => ({
+                value: p,
+                label: RETIREMENT_PROFILE_LABELS[p],
               }))}
-              isPresetActive={(w) => !withdrawalCustom && inputs.withdrawalRate === w}
-              onSelectPreset={(w) => {
-                set("withdrawalRate", w);
-                setWithdrawalCustom(false);
-              }}
-              customActive={withdrawalCustom}
-              onSelectCustom={() => setWithdrawalCustom(true)}
-              ariaLabel="Tasa de retiro"
-            >
-              <PercentInput
-                value={inputs.withdrawalRate}
-                onChange={(v) => set("withdrawalRate", v)}
-                step={0.1}
-                max={20}
-                ariaLabel="Tasa de retiro personalizada"
-              />
-            </SegmentedWithCustom>
-            <small>% de la cartera que retirás al año. Define tu número de retiro.</small>
+              value={profile}
+              onChange={selectProfile}
+              ariaLabel="Perfil de retiro"
+            />
+            {profile === "custom" ? (
+              <small>Ajustá la tasa de retiro y la cartera a tu gusto, abajo.</small>
+            ) : (
+              <small>
+                {ALLOCATION_LABELS[inputs.retirementAllocation]} · retiro{" "}
+                {formatPct(inputs.withdrawalRate)} · rinde ~
+                {formatPct(result.retirementReturn)} real
+              </small>
+            )}
           </div>
 
-          <div className="field field-wide">
-            <label>
-              <span className="label-with-info">
-                Cartera en el retiro
-                <InfoTip label="Qué es la cartera en el retiro">
-                  La mezcla de acciones y bonos cuando te jubilás. Más acciones
-                  rinde más, pero con más volatilidad; más bonos es más estable,
-                  pero rinde menos. Podés editar el rendimiento de cada una en
-                  los <strong>ajustes avanzados</strong>, o elegir{" "}
-                  <strong>Personalizada</strong> para fijar el rendimiento a mano.
-                </InfoTip>
-              </span>
-            </label>
-            <div className="risk-scale" aria-hidden="true">
-              <span>Más riesgo</span>
-              <span className="risk-scale-track" />
-              <span>Menos riesgo</span>
-            </div>
-            <SegmentedWithCustom
-              options={ALLOCATIONS.map((a) => ({
-                value: a,
-                label: ALLOCATION_LABELS[a],
-              }))}
-              isPresetActive={(a) => inputs.retirementAllocation === a}
-              onSelectPreset={(a) => set("retirementAllocation", a)}
-              customActive={inputs.retirementAllocation === "custom"}
-              onSelectCustom={() => set("retirementAllocation", "custom")}
-              customLabel={ALLOCATION_LABELS.custom}
-              ariaLabel="Cartera en el retiro"
-            >
-              <PercentInput
-                value={inputs.customRetirementReturn}
-                onChange={(v) => set("customRetirementReturn", v)}
-                step={0.5}
-                max={30}
-                ariaLabel="Rendimiento de la cartera personalizada"
-              />
-            </SegmentedWithCustom>
-            <small>
-              {ALLOCATION_LABELS[inputs.retirementAllocation]} · ~
-              {formatPct(result.retirementReturn)} real —{" "}
-              {ALLOCATION_NOTES[inputs.retirementAllocation]}
-            </small>
-          </div>
+          {profile === "custom" && (
+            <>
+              <div className="field field-wide">
+                <label>
+                  <span className="label-with-info">
+                    Tasa de retiro
+                    <InfoTip label="Qué es la tasa de retiro">
+                      Es el porcentaje de tu cartera que retirás cada año para
+                      vivir. La <strong>regla del 4%</strong> sugiere que retirar
+                      ~4% anual es históricamente sostenible. Más baja = más
+                      margen, pero necesitás más capital; más alta = menos
+                      capital, pero más riesgo de quedarte corto. Tu número de
+                      retiro = gasto anual ÷ tasa.
+                    </InfoTip>
+                  </span>
+                </label>
+                <SegmentedWithCustom
+                  options={WITHDRAWAL_OPTIONS.map((w) => ({
+                    value: w,
+                    label: formatPct(w),
+                  }))}
+                  isPresetActive={(w) =>
+                    !withdrawalCustom && inputs.withdrawalRate === w
+                  }
+                  onSelectPreset={(w) => {
+                    set("withdrawalRate", w);
+                    setWithdrawalCustom(false);
+                  }}
+                  customActive={withdrawalCustom}
+                  onSelectCustom={() => setWithdrawalCustom(true)}
+                  ariaLabel="Tasa de retiro"
+                >
+                  <PercentInput
+                    value={inputs.withdrawalRate}
+                    onChange={(v) => set("withdrawalRate", v)}
+                    step={0.1}
+                    max={20}
+                    ariaLabel="Tasa de retiro personalizada"
+                  />
+                </SegmentedWithCustom>
+                <small>
+                  % de la cartera que retirás al año. Define tu número de retiro.
+                </small>
+              </div>
+
+              <div className="field field-wide">
+                <label>
+                  <span className="label-with-info">
+                    Cartera en el retiro
+                    <InfoTip label="Qué es la cartera en el retiro">
+                      La mezcla de acciones y bonos cuando te jubilás. Más
+                      acciones rinde más, pero con más volatilidad; más bonos es
+                      más estable, pero rinde menos. Podés editar el rendimiento
+                      de cada una en los <strong>ajustes avanzados</strong>, o
+                      elegir <strong>Personalizada</strong> para fijar el
+                      rendimiento a mano.
+                    </InfoTip>
+                  </span>
+                </label>
+                <SegmentedWithCustom
+                  options={ALLOCATIONS.map((a) => ({
+                    value: a,
+                    label: ALLOCATION_LABELS[a],
+                  }))}
+                  isPresetActive={(a) => inputs.retirementAllocation === a}
+                  onSelectPreset={(a) => set("retirementAllocation", a)}
+                  customActive={inputs.retirementAllocation === "custom"}
+                  onSelectCustom={() => set("retirementAllocation", "custom")}
+                  customLabel={ALLOCATION_LABELS.custom}
+                  ariaLabel="Cartera en el retiro"
+                >
+                  <PercentInput
+                    value={inputs.customRetirementReturn}
+                    onChange={(v) => set("customRetirementReturn", v)}
+                    step={0.5}
+                    max={30}
+                    ariaLabel="Rendimiento de la cartera personalizada"
+                  />
+                </SegmentedWithCustom>
+                <small>
+                  {ALLOCATION_LABELS[inputs.retirementAllocation]} · ~
+                  {formatPct(result.retirementReturn)} real —{" "}
+                  {ALLOCATION_NOTES[inputs.retirementAllocation]}
+                </small>
+              </div>
+            </>
+          )}
         </div>
+
+        <AdvancedSettings
+          assumptions={assumptions}
+          setAssumptions={setAssumptions}
+          currency={currency}
+          setCurrency={setCurrency}
+          onReset={resetAll}
+        />
 
         <section className="stats">
           <div className="stat">
@@ -714,14 +794,6 @@ export default function RetirementPlanner() {
             </ResponsiveContainer>
           </div>
         </section>
-
-        <AdvancedSettings
-          assumptions={assumptions}
-          setAssumptions={setAssumptions}
-          currency={currency}
-          setCurrency={setCurrency}
-          onReset={resetAll}
-        />
       </div>
     </section>
   );
