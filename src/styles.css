@@ -486,22 +486,57 @@ summary:focus-visible {
   line-height: 1.5;
 }
 
-.money {
+/* Grupos de input: la moneda, la edad y los porcentajes comparten un recuadro
+   con borde donde el afijo vive DENTRO de la caja (el símbolo de moneda como
+   prefijo; "años"/"%" como sufijo). El borde lo aporta el contenedor, así todos
+   los controles quedan full-width y alineados borde a borde en la grilla. */
+.money,
+.years-input,
+.pct-input {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 0.7rem;
 }
 
-.money span {
-  color: var(--muted);
-  font-size: 0.95rem;
-  min-width: 2.2rem;
+/* Anillo de foco sobre el grupo entero; el input cede el suyo (más abajo). */
+.money:focus-within,
+.years-input:focus-within,
+.pct-input:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
-.money > input[type="number"] {
+/* El input dentro de un grupo suelta su propio borde/fondo: lo aporta el grupo. */
+.money input[type="number"],
+.years-input input[type="number"],
+.pct-input input[type="number"] {
   flex: 1;
   width: auto;
   min-width: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.5rem 0;
+}
+
+.money input[type="number"]:focus,
+.years-input input[type="number"]:focus,
+.pct-input input[type="number"]:focus {
+  outline: none;
+}
+
+/* El afijo: símbolo de moneda (prefijo) o "años"/"%" (sufijo). */
+.money span,
+.years-input span,
+.pct-input span {
+  flex: none;
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 input[type="number"] {
@@ -584,8 +619,10 @@ input[type="range"]::-moz-range-thumb {
   color: var(--muted);
 }
 
+/* Acá el grupo no llena la fila: queda compacto, en línea con su botón. */
 .custom-rate .pct-input input {
-  width: 74px;
+  flex: none;
+  width: 64px;
   max-width: 100%;
 }
 
@@ -871,38 +908,8 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
-.pct-input,
-.years-input {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  min-width: 0;
-}
-
-/* La edad/años llena su fila (como el campo de dinero) en lugar de quedar como
-   una cajita fija de 140px perdida en un renglón ancho. */
-.years-input {
-  display: flex;
-}
-
-.pct-input input {
-  width: 96px;
-  max-width: 100%;
-  min-width: 0;
-}
-
-.years-input input {
-  flex: 1;
-  width: auto;
-  min-width: 0;
-  max-width: 160px;
-}
-
-.pct-input span,
-.years-input span {
-  color: var(--muted);
-  font-size: 0.9rem;
-}
+/* Los grupos .money / .years-input / .pct-input se estilan juntos más arriba
+   (recuadro con afijo adentro). Acá solo quedan los ajustes por contexto. */
 
 .ret-returns {
   display: grid;
