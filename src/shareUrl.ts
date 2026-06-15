@@ -1,9 +1,8 @@
 /**
- * Compartir el plan por enlace: codifica todo el plan en el hash de la URL, así
- * se puede copiar un link en vez de un archivo. Reutiliza el mismo serializador
- * y validador que la exportación a JSON. `parsePlanData` es la frontera de
- * seguridad: un enlace malicioso, viejo o roto degrada a los valores por
- * defecto, exactamente igual que un archivo importado.
+ * Share the plan via link: encodes the whole plan into the URL hash, so you can
+ * copy a link instead of a file. Reuses the same serializer and validator as the
+ * JSON export. `parsePlanData` is the security boundary: a malicious, old, or
+ * broken link degrades to the default values, exactly like an imported file.
  */
 import {
   buildExportFile,
@@ -12,11 +11,11 @@ import {
   type PlanData,
 } from "./exportData";
 
-/** Marca del hash de un plan compartido: `#plan=...`. */
+/** Hash marker for a shared plan: `#plan=...`. */
 const HASH_KEY = "plan";
 
-// btoa/atob solo manejan bytes (Latin-1); el JSON puede tener acentos. Pasamos
-// por UTF-8 y usamos base64url para que el hash viaje intacto por chats y links.
+// btoa/atob only handle bytes (Latin-1); the JSON may contain accented characters.
+// We go through UTF-8 and use base64url so the hash travels intact through chats and links.
 function toBase64Url(str: string): string {
   const bytes = new TextEncoder().encode(str);
   let bin = "";
@@ -32,12 +31,12 @@ function fromBase64Url(b64u: string): string {
   return new TextDecoder().decode(bytes);
 }
 
-/** Codifica el plan a un string apto para el hash de la URL. */
+/** Encodes the plan into a string suitable for the URL hash. */
 export function encodePlanToHash(data: PlanData): string {
   return toBase64Url(JSON.stringify(buildExportFile(data)));
 }
 
-/** URL completa para compartir, a partir de la actual. */
+/** Full share URL, derived from the current one. */
 export function buildShareUrl(
   data: PlanData,
   base = window.location.href
@@ -48,8 +47,8 @@ export function buildShareUrl(
 }
 
 /**
- * Extrae y valida un plan del hash, si lo hay. Devuelve null si el hash no trae
- * un plan; un ImportResult (ok/error) si lo trae.
+ * Extracts and validates a plan from the hash, if present. Returns null if the
+ * hash carries no plan; an ImportResult (ok/error) if it does.
  */
 export function readPlanFromHash(
   hash = window.location.hash

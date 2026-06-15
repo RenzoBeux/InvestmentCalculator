@@ -55,14 +55,14 @@ import { readPlanFromHash } from "./shareUrl";
 
 const WITHDRAWAL_OPTIONS = [0.03, 0.035, 0.04];
 
-/** Modos del selector "¿Qué querés calcular?" (auto-cálculo). */
+/** Modes for the "¿Qué querés calcular?" selector (auto-calc). */
 const SOLVE_OPTIONS: { value: SolveFor; label: string }[] = [
   { value: "timeline", label: "Cuándo me jubilo" },
   { value: "monthly", label: "Cuánto aportar" },
   { value: "initial", label: "Inversión inicial" },
 ];
 
-/** La bajada que explica, en cada modo, qué queda fijo y qué se calcula. */
+/** The caption explaining, for each mode, what stays fixed and what gets calculated. */
 const SOLVE_HINT: Record<SolveFor, string> = {
   timeline: "Dejás todo fijo y te decimos a qué edad podés jubilarte.",
   monthly:
@@ -77,10 +77,10 @@ const ALLOCATION_NOTES: Record<Allocation, string> = {
   custom: "el rendimiento real que vos estimes para tu cartera",
 };
 
-/** ¿La tasa de retiro cargada no es uno de los presets? Entonces es personalizada. */
+/** Is the loaded withdrawal rate not one of the presets? Then it's custom. */
 const isCustomWithdrawal = (rate: number) => !WITHDRAWAL_OPTIONS.includes(rate);
 
-/** Perfil de retiro derivado de un set de inputs (tasa de retiro + cartera). */
+/** Retirement profile derived from a set of inputs (withdrawal rate + portfolio). */
 const profileFor = (i: PlanInputs): RetirementProfile =>
   deriveProfile(
     i.withdrawalRate,
@@ -106,35 +106,35 @@ export default function RetirementPlanner() {
     DEFAULT_AGE
   );
 
-  // La tasa de retiro guarda solo el número; este flag decide si mostramos los
-  // presets o el input personalizado. Se inicializa según el valor cargado.
+  // The withdrawal rate stores only the number; this flag decides whether we show the
+  // presets or the custom input. It's initialized from the loaded value.
   const [withdrawalCustom, setWithdrawalCustom] = useState(() =>
     isCustomWithdrawal(inputs.withdrawalRate)
   );
 
-  // El "perfil de retiro" es un atajo que fija a la vez la tasa de retiro y la
-  // cartera. No se persiste aparte: se deriva de esos valores (igual que el flag
-  // de arriba). Con un preset ocultamos los controles finos; "custom" los revela.
+  // The "retirement profile" is a shortcut that sets the withdrawal rate and the
+  // portfolio at once. It isn't persisted separately: it's derived from those values (like the flag
+  // above). With a preset we hide the fine-grained controls; "custom" reveals them.
   const [profile, setProfile] = useState<RetirementProfile>(() =>
     profileFor(inputs)
   );
 
   const { dark } = useTheme();
 
-  // ¿Hay edad cargada? El auto-cálculo es por edad de jubilación, así que sin
-  // edad (currentAge 0 = "sin cargar") no aplica. Coincide con planSummary.
+  // Is there an age loaded? The auto-calc is based on retirement age, so without
+  // an age (currentAge 0 = "not loaded") it doesn't apply. Matches planSummary.
   const ageMode = currentAge > 0;
 
-  // ¿Estamos despejando un valor (aporte/inicial) en vez de calcular la edad?
-  // En "timeline" no hay edad de jubilación objetivo: ese campo y Coast FIRE
-  // no aplican, porque ahí la edad es justamente lo que calculamos.
+  // Are we solving for a value (contribution/initial) instead of computing the age?
+  // In "timeline" there's no target retirement age: that field and Coast FIRE
+  // don't apply, because there the age is precisely what we're computing.
   const solveMode = inputs.solveFor !== "timeline";
 
-  // Auto-cálculo: en los modos "monthly"/"initial" despejamos el valor que falta
-  // y lo inyectamos en los inputs ANTES de simular (vía applySolve), de modo que
-  // gráfico, stats y veredicto cuenten la misma historia. `solve` guarda el
-  // resultado del despeje para mostrarlo en el campo. El aporte/inicial que tipeó
-  // el usuario nunca se pisa: queda en `inputs` y vuelve al pasar a "timeline".
+  // Auto-calc: in the "monthly"/"initial" modes we solve for the missing value
+  // and inject it into the inputs BEFORE simulating (via applySolve), so that
+  // chart, stats, and verdict all tell the same story. `solve` holds the
+  // result of the solve to display it in the field. The contribution/initial the user
+  // typed is never overwritten: it stays in `inputs` and comes back when switching to "timeline".
   const solve = useMemo(
     () => resolveSolve(inputs, assumptions, currentAge),
     [inputs, assumptions, currentAge]
@@ -157,8 +157,8 @@ export default function RetirementPlanner() {
     setInputs((prev) => ({ ...prev, [key]: value }));
   }
 
-  // Elegir un perfil fija de una vez la tasa de retiro y la cartera.
-  // "Personalizado" no toca los valores: solo revela los controles para editarlos.
+  // Choosing a profile sets the withdrawal rate and the portfolio at once.
+  // "Personalizado" doesn't touch the values: it just reveals the controls to edit them.
   function selectProfile(p: RetirementProfile) {
     setProfile(p);
     if (p === "custom") return;
@@ -180,7 +180,7 @@ export default function RetirementPlanner() {
     setProfile(profileFor(DEFAULT_INPUTS));
   }
 
-  // Todo lo que el usuario configuró, listo para exportar a un archivo.
+  // Everything the user configured, ready to export to a file.
   const planData: PlanData = { inputs, assumptions, currency, currentAge };
 
   function applyImport(data: PlanData) {
@@ -192,8 +192,8 @@ export default function RetirementPlanner() {
     setProfile(profileFor(data.inputs));
   }
 
-  // Si la URL trae un plan compartido (#plan=...), ofrecemos cargarlo y limpiamos
-  // el hash. parsePlanData ya valida y sanea, así que un enlace roto no rompe nada.
+  // If the URL carries a shared plan (#plan=...), we offer to load it and clear
+  // the hash. parsePlanData already validates and sanitizes, so a broken link breaks nothing.
   useEffect(() => {
     const shared = readPlanFromHash();
     if (!shared) return;
@@ -210,7 +210,7 @@ export default function RetirementPlanner() {
     ) {
       applyImport(shared.data);
     }
-    // Solo al montar: leemos el hash una vez.
+    // Only on mount: we read the hash once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -235,9 +235,9 @@ export default function RetirementPlanner() {
   const axisColor = dark ? "rgba(236,230,216,0.5)" : "rgba(33,29,22,0.5)";
   const gridColor = dark ? "rgba(236,230,216,0.1)" : "rgba(33,29,22,0.08)";
 
-  // Narrativa derivada (edad de jubilación, resumen y veredicto), compartida con
-  // el PDF a través de buildPlanSummary. Si hay edad cargada mostramos la edad
-  // real en vez de "años desde hoy".
+  // Derived narrative (retirement age, summary, and verdict), shared with
+  // the PDF through buildPlanSummary. If there's an age loaded we show the
+  // real age instead of "years from now".
   const summary = buildPlanSummary(
     result,
     effective.inputs,
@@ -248,9 +248,9 @@ export default function RetirementPlanner() {
   );
   const { retirementAge, retirementSummary } = summary;
 
-  // Coast FIRE: capital que, sin aportar más, capitaliza hasta el número de
-  // retiro para la edad objetivo. Solo aplica en los modos de despeje (en
-  // "timeline" no hay edad objetivo) y si la jubilación objetivo es más adelante.
+  // Coast FIRE: capital that, without contributing more, compounds up to the
+  // retirement number by the target age. Only applies in the solve modes (in
+  // "timeline" there's no target age) and if the target retirement is further out.
   const coastApplies =
     solveMode && ageMode && inputs.coastTargetAge > currentAge;
   const coast = coastNumber(
@@ -259,17 +259,17 @@ export default function RetirementPlanner() {
     inputs.coastTargetAge - currentAge
   );
 
-  // Aportes propios vs. interés compuesto (sobre el saldo al llegar al número).
+  // Own contributions vs. compound interest (on the balance when reaching the number).
   const contributed = result.contributedAtFire;
   const growth = Math.max(0, result.growthAtFire);
   const breakdownTotal = contributed + growth;
   const contributedPct =
     breakdownTotal > 0 ? (contributed / breakdownTotal) * 100 : 0;
 
-  // En modo despeje, qué mostrar en el campo calculado (aporte o inicial):
-  // el valor resuelto + una aclaración, o "—" con el motivo si no es posible.
+  // In solve mode, what to show in the computed field (contribution or initial):
+  // the solved value + a clarification, or "—" with the reason if it isn't possible.
   const solvedField = (() => {
-    const kind = inputs.solveFor; // "monthly" | "initial" (no entra en "timeline")
+    const kind = inputs.solveFor; // "monthly" | "initial" (doesn't enter in "timeline")
     const suffix = kind === "monthly" ? " / mes" : "";
     if (!ageMode) {
       return {

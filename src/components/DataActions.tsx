@@ -9,16 +9,16 @@ import { generatePlanPdf } from "../exportPdf";
 import { buildShareUrl } from "../shareUrl";
 
 interface Props {
-  /** Datos actuales a exportar. */
+  /** Current data to export. */
   data: PlanData;
-  /** Se llama con los datos saneados cuando el usuario importa un archivo. */
+  /** Called with the sanitized data when the user imports a file. */
   onImport: (data: PlanData) => void;
 }
 
 /**
- * Barra de acciones del plan: exportar los datos a JSON, importarlos de vuelta y
- * guardar un PDF (vía el diálogo de impresión del navegador). Se oculta al
- * imprimir para no aparecer en el PDF.
+ * Plan action bar: export the data to JSON, import it back, and
+ * save a PDF (via the browser's print dialog). Hidden when
+ * printing so it doesn't show up in the PDF.
  */
 export function DataActions({ data, onImport }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -51,7 +51,7 @@ export function DataActions({ data, onImport }: Props) {
 
   async function handleFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    // Reseteamos para poder volver a elegir el mismo archivo más tarde.
+    // Reset so the same file can be selected again later.
     e.target.value = "";
     if (!file) return;
     setError(null);

@@ -1,6 +1,6 @@
 /**
- * Selector de tema en el nav: claro / oscuro / sistema. Tres botones de ícono
- * (un radiogroup accesible). Lee y escribe el contexto de tema.
+ * Theme selector in the nav: light / dark / system. Three icon buttons
+ * (an accessible radiogroup). Reads from and writes to the theme context.
  */
 import { type ReactNode } from "react";
 import { useTheme, type ThemeChoice } from "../useTheme";

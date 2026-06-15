@@ -1,7 +1,7 @@
 /**
- * Banner de estado del plan (ok / bad / warn). Suma un ícono por estado, así el
- * significado no depende solo del color (accesible para daltonismo), y un
- * `aria-live` para que se anuncie cuando cambia al editar los inputs.
+ * Plan status banner (ok / bad / warn). Adds an icon per status, so the
+ * meaning doesn't depend on color alone (accessible for color blindness), plus an
+ * `aria-live` so it's announced when it changes as the inputs are edited.
  */
 import { type ReactNode } from "react";
 import { type StatusKind } from "../planSummary";

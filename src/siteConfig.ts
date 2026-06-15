@@ -1,14 +1,14 @@
 /**
- * Configuración de marca del sitio. Cambiá estos valores para hacerlo tuyo:
- * el nombre, el lema y el enlace al repositorio se usan en el nav, el hero y
- * el pie de página.
+ * Site branding configuration. Change these values to make it your own:
+ * the name, the tagline, and the repository link are used in the nav, the hero,
+ * and the footer.
  */
 export const SITE = {
   brand: "Planificador FIRE",
   shortName: "FIRE",
   tagline: "Calculá cuánto necesitás para vivir de tus inversiones",
-  /** Reemplazá con la URL de tu repositorio (o dejá vacío para ocultar el enlace). */
+  /** Replace with your repository URL (or leave empty to hide the link). */
   repoUrl: "https://github.com/RenzoBeux/InvestmentCalculator",
-  /** Página personal del autor. */
+  /** Author's personal page. */
   authorUrl: "https://renzobeux.dev",
 };

@@ -1,6 +1,6 @@
 /**
- * Logo de GitHub (la marca "octocat") como SVG inline. Usa `currentColor`, así
- * que hereda el color del enlace que lo contiene y cambia en hover como el resto.
+ * GitHub logo (the "octocat" mark) as inline SVG. Uses `currentColor`, so it
+ * inherits the color of its containing link and changes on hover like the rest.
  */
 export function GitHubIcon({ size = 18 }: { size?: number }) {
   return (

@@ -1,16 +1,16 @@
 /**
- * Campo de solo lectura que muestra un valor que la calculadora despejó (el
- * aporte mensual o la inversión inicial) en lugar de un input editable. Se usa
- * en los modos de auto-cálculo: el usuario fija la edad de jubilación objetivo y
- * este campo se calcula solo. `ok` distingue un resultado válido de un mensaje
- * de error (objetivo imposible o falta cargar la edad).
+ * Read-only field that displays a value the calculator solved for (the monthly
+ * contribution or the initial investment) instead of an editable input. Used in
+ * the auto-calc modes: the user fixes the target retirement age and this field
+ * is computed automatically. `ok` distinguishes a valid result from an error
+ * message (impossible target or the age has not been loaded yet).
  */
 interface Props {
   label: string;
   ok: boolean;
-  /** El valor ya formateado (p. ej. "US$1.240 / mes") o "—" si no aplica. */
+  /** The already-formatted value (e.g. "US$1.240 / mes") or "—" if not applicable. */
   display: string;
-  /** Aclaración bajo el valor: "para jubilarte a los 45" o el mensaje de error. */
+  /** Clarification below the value: "para jubilarte a los 45" or the error message. */
   note: string;
 }
 

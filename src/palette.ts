@@ -1,17 +1,17 @@
 /**
- * Colores de marca del gráfico, compartidos entre la pantalla (recharts) y el
- * PDF (jsPDF dibujado a mano). Mantener una sola fuente evita que las dos
- * superficies se desincronicen.
+ * Chart brand colors, shared between the screen (recharts) and the
+ * PDF (hand-drawn jsPDF). Keeping a single source prevents the two
+ * surfaces from drifting out of sync.
  *
- * Son `#rrggbb` planos a propósito: el parser `rgb()` del PDF los necesita así.
+ * They are flat `#rrggbb` on purpose: the PDF's `rgb()` parser needs them that way.
  */
 export const CHART = {
-  /** Fase de acumulación (azul). */
+  /** Accumulation phase (blue). */
   accumulation: "#2B5B8A",
-  /** Retiro que se sostiene o crece (verde). */
+  /** Retirement that holds steady or grows (green). */
   grow: "#1E7A52",
-  /** Retiro que se agota (rojo). */
+  /** Retirement that depletes (red). */
   decline: "#B23A2E",
-  /** Línea del número de retiro / objetivo (dorado). */
+  /** Retirement number / target line (gold). */
   target: "#B07D18",
 } as const;

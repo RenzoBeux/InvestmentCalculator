@@ -1,10 +1,10 @@
 /**
- * Narrativa derivada del plan: la edad de jubilación, el resumen del retiro y el
- * "veredicto" (el texto del estado ok/bad/warn). Es la única fuente de esa
- * lógica: la pantalla y el PDF la consumen igual, así no se desincronizan.
+ * Plan-derived narrative: the retirement age, the retirement summary, and the
+ * "verdict" (the ok/bad/warn status text). This is the single source of that
+ * logic: the screen and the PDF consume it identically, so they never drift.
  *
- * Puro y sin DOM: recibe los formateadores como parámetros. El texto difiere a
- * propósito entre la pantalla y el PDF en tres lugares, controlado por `surface`.
+ * Pure and DOM-free: it receives the formatters as parameters. The text differs
+ * on purpose between the screen and the PDF in three spots, controlled by `surface`.
  */
 import {
   ALLOCATION_LABELS,
@@ -18,26 +18,26 @@ export type StatusKind = "ok" | "bad" | "warn";
 export type Surface = "screen" | "pdf";
 
 export interface PlanSummaryFmt {
-  /** Formatea un importe ya redondeado (p. ej. "US$1.234"). */
+  /** Formats an already-rounded amount (e.g. "US$1.234"). */
   money: (n: number) => string;
-  /** Formatea un porcentaje (0.04 → "4%"). */
+  /** Formats a percentage (0.04 → "4%"). */
   pct: (x: number) => string;
 }
 
 export interface PlanSummary {
-  /** Si hay edad cargada mostramos la edad real en vez de "años desde hoy". */
+  /** If an age is loaded we show the real age instead of "years from now". */
   ageMode: boolean;
-  /** Edad a la que se jubila (válida solo en ageMode). */
+  /** Age at which you retire (valid only in ageMode). */
   retirementAge: number;
-  /** Edad a la que se agota la cartera, si aplica. */
+  /** Age at which the portfolio runs out, if applicable. */
   depletionAge: number | null;
-  /** Frase "Te jubilás...". */
+  /** "Te jubilás..." phrase. */
   jubilasPhrase: string;
-  /** Qué pasa con el dinero en el retiro (para la tarjeta de stats). */
+  /** What happens to the money in retirement (for the stats card). */
   retirementSummary: string;
-  /** Clase del banner de estado. */
+  /** Status banner class. */
   kind: StatusKind;
-  /** Texto completo del estado. */
+  /** Full status text. */
   verdict: string;
 }
 

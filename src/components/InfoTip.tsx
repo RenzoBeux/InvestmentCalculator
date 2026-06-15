@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-/** Botón (i) que muestra una breve explicación al tocarlo. Se cierra al hacer
- * clic afuera o con Escape. */
+/** (i) button that shows a brief explanation when tapped. Closes when
+ * clicking outside or pressing Escape. */
 export function InfoTip({ children, label = "Más información" }: { children: ReactNode; label?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);

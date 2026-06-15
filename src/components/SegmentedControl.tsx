@@ -1,8 +1,8 @@
 /**
- * Grupo de botones de selección única (un "radio group" estilado). Reemplaza los
- * `<div className="seg">` armados a mano y agrega la semántica de accesibilidad
- * (role="radiogroup" / role="radio" / aria-checked) que los botones sueltos no
- * tenían. Emite las mismas clases, así el CSS no cambia.
+ * Single-select button group (a styled "radio group"). Replaces the
+ * hand-rolled `<div className="seg">` markup and adds the accessibility semantics
+ * (role="radiogroup" / role="radio" / aria-checked) that the bare buttons didn't
+ * have. Emits the same classes, so the CSS doesn't change.
  */
 interface Option<T> {
   value: T;
@@ -13,7 +13,7 @@ interface Props<T extends string | number> {
   options: Option<T>[];
   value: T;
   onChange: (value: T) => void;
-  /** Por defecto compara contra `value`; pasá esto para una lógica de activo a medida. */
+  /** Defaults to comparing against `value`; pass this for custom active logic. */
   isActive?: (value: T) => boolean;
   ariaLabel: string;
 }

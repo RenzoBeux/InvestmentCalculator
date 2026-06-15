@@ -1,11 +1,11 @@
 /**
- * Genera el PDF del plan con jsPDF: un reporte de una página, vectorial y
- * autocontenido (incluye el gráfico dibujado a mano, no una captura). Reemplaza
- * al viejo "imprimir la página", que salía como una web impresa.
+ * Generates the plan PDF with jsPDF: a one-page report, vector-based and
+ * self-contained (it includes the hand-drawn chart, not a screenshot). Replaces
+ * the old "print the page", which came out looking like a printed web page.
  *
- * Paleta fija clara: el PDF siempre sale tinta oscura sobre papel, sin importar
- * el tema de la pantalla. jsPDF se importa de forma diferida (solo se descarga
- * cuando el usuario exporta), así no pesa en el bundle principal.
+ * Fixed light palette: the PDF always comes out as dark ink on paper, regardless
+ * of the on-screen theme. jsPDF is imported lazily (it's only downloaded
+ * when the user exports), so it doesn't weigh on the main bundle.
  */
 import type { jsPDF } from "jspdf";
 import {
@@ -53,9 +53,9 @@ const fill = (d: jsPDF, hex: string) => d.setFillColor(...rgb(hex));
 export async function generatePlanPdf(plan: PlanData): Promise<void> {
   const { jsPDF: JsPDF } = await import("jspdf");
   const { currency, currentAge } = plan;
-  // En los modos de auto-cálculo, inyectamos el valor despejado (aporte o
-  // inicial) ANTES de simular, igual que la pantalla, para que el PDF y la app
-  // muestren exactamente los mismos números.
+  // In the auto-calc modes, we inject the solved value (contribution or
+  // initial) BEFORE simulating, just like the screen, so the PDF and the app
+  // show exactly the same numbers.
   const { inputs, assumptions } = applySolve(
     plan.inputs,
     plan.assumptions,
@@ -83,7 +83,7 @@ export async function generatePlanPdf(plan: PlanData): Promise<void> {
     inputs.coastTargetAge - currentAge
   );
 
-  // ----------------------------------------------------------------- documento
+  // ----------------------------------------------------------------- document
   const doc = new JsPDF({ unit: "pt", format: "a4" });
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
@@ -91,7 +91,7 @@ export async function generatePlanPdf(plan: PlanData): Promise<void> {
   const CW = W - M * 2;
   let y = M + 4;
 
-  // Encabezado: marca (izq) y fecha (der), con una regla debajo.
+  // Header: brand (left) and date (right), with a rule below.
   doc.setFont("times", "bold");
   doc.setFontSize(15);
   ink(doc, INK);
@@ -111,7 +111,7 @@ export async function generatePlanPdf(plan: PlanData): Promise<void> {
   doc.line(M, y, W - M, y);
   y += 30;
 
-  // Título + bajada.
+  // Title + subheading.
   doc.setFont("times", "bold");
   doc.setFontSize(23);
   ink(doc, INK);
@@ -129,7 +129,7 @@ export async function generatePlanPdf(plan: PlanData): Promise<void> {
   doc.text(intro, M, y);
   y += intro.length * 12 + 14;
 
-  // Resultados: tres tarjetas.
+  // Results: three cards.
   y = sectionTitle(doc, "Resultados", M, y, CW);
   const cards: [string, string][] = [
     ["Tu número de retiro", isFinite(result.fireNumber) ? fmt(result.fireNumber) : "—"],
@@ -146,7 +146,7 @@ export async function generatePlanPdf(plan: PlanData): Promise<void> {
   y = drawCards(doc, cards, M, y, CW);
   y += 14;
 
-  // Veredicto en una caja tenue.
+  // Verdict in a muted box.
   const verdictLines = doc.splitTextToSize(verdict, CW - 24);
   const boxH = verdictLines.length * 12 + 18;
   fill(doc, CARD);
@@ -159,7 +159,7 @@ export async function generatePlanPdf(plan: PlanData): Promise<void> {
   doc.text(verdictLines, M + 12, y + 15);
   y += boxH + 16;
 
-  // Resultados secundarios: aportes vs. interés y Coast FIRE, en una línea tenue.
+  // Secondary results: contributions vs. interest and Coast FIRE, in a muted line.
   const extras: string[] = [];
   if (result.reached && result.contributedAtFire + result.growthAtFire > 0) {
     extras.push(
@@ -182,7 +182,7 @@ export async function generatePlanPdf(plan: PlanData): Promise<void> {
     y += 6;
   }
 
-  // Dos columnas: Tus datos | Supuestos.
+  // Two columns: Your data | Assumptions.
   const colGap = 28;
   const colW = (CW - colGap) / 2;
   const leftX = M;
@@ -240,12 +240,12 @@ export async function generatePlanPdf(plan: PlanData): Promise<void> {
   rightY = drawList(doc, supuestos, rightX, rightY, colW);
   y = Math.max(leftY, rightY) + 22;
 
-  // Gráfico.
+  // Chart.
   y = sectionTitle(doc, "Proyección", M, y, CW);
   const chartH = Math.min(210, H - M - 56 - y);
   drawChart(doc, result, currentAge, ageMode, axisFmt, M, y, CW, chartH);
 
-  // Pie: aviso.
+  // Footer: disclaimer.
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   ink(doc, MUTED);
@@ -298,7 +298,7 @@ function drawCards(
     doc.setFontSize(7.5);
     ink(doc, MUTED);
     doc.text(label.toUpperCase(), cx + 12, y + 18, { charSpace: 0.5 });
-    // El valor se achica si no entra en la tarjeta.
+    // The value shrinks if it doesn't fit in the card.
     let size = 15;
     doc.setFont("times", "bold");
     doc.setFontSize(size);
@@ -351,7 +351,7 @@ function drawChart(
   const accYears = series.accYears;
   const totalYears = Math.max(1, series.totalYears);
 
-  // Puntos (edad/año, valor) de cada fase.
+  // Points (age/year, value) of each phase.
   const acc: [number, number][] = series.accumulation.map(({ yearOffset, value }) => [
     currentAge + yearOffset,
     value,
@@ -367,7 +367,7 @@ function drawChart(
   for (const [, v] of [...acc, ...ret]) yMax = Math.max(yMax, v);
   yMax = yMax > 0 ? yMax * 1.08 : 1;
 
-  // Área de ploteo (gutter izq. para etiquetas Y, gutter inf. para edades).
+  // Plot area (left gutter for Y labels, bottom gutter for ages).
   const gx = 42;
   const gb = 26;
   const px0 = x + gx;
@@ -378,7 +378,7 @@ function drawChart(
   const px = (age: number) => px0 + ((age - xMin) / (xMax - xMin || 1)) * pw;
   const py = (val: number) => py0 + ph - (val / yMax) * ph;
 
-  // Gridlines horizontales + etiquetas Y.
+  // Horizontal gridlines + Y labels.
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   const ySteps = 4;
@@ -392,7 +392,7 @@ function drawChart(
     doc.text(axisFmt(val), px0 - 6, yy + 2.5, { align: "right" });
   }
 
-  // Eje X: etiquetas de cada tick (alineadas hacia adentro en los bordes).
+  // X axis: labels for each tick (aligned inward at the edges).
   const xStep = Math.max(1, Math.round(totalYears / 7));
   doc.setFontSize(7.5);
   ink(doc, MUTED);
@@ -401,12 +401,12 @@ function drawChart(
     const align = t === 0 ? "left" : t + xStep > totalYears ? "right" : "center";
     doc.text(`${ageMode ? xMin + t : t}`, xx, py0 + ph + 11, { align });
   }
-  // Nombre del eje, centrado en su propia línea para no pisar el último tick.
+  // Axis name, centered on its own line so it doesn't overlap the last tick.
   doc.text(ageMode ? "Edad" : "Años desde hoy", px0 + pw / 2, py0 + ph + 22, {
     align: "center",
   });
 
-  // Línea del número de retiro (objetivo), punteada.
+  // Retirement number (target) line, dashed.
   if (isFinite(result.fireNumber) && result.fireNumber <= yMax) {
     stroke(doc, GOLD);
     doc.setLineWidth(1);
@@ -415,7 +415,7 @@ function drawChart(
     doc.setLineDashPattern([], 0);
   }
 
-  // Marca "te jubilás" (vertical punteada) si llega.
+  // "te jubilás" marker (dashed vertical) if reached.
   if (result.reached) {
     const jx = px(currentAge + accYears);
     stroke(doc, MUTED);
@@ -432,9 +432,9 @@ function drawChart(
     );
   }
 
-  // Curva de acumulación (azul).
+  // Accumulation curve (blue).
   drawPolyline(doc, acc.map(([a, v]) => [px(a), py(v)]), BLUE);
-  // Curva de retiro (verde si dura, rojo si se agota).
+  // Retirement curve (green if it lasts, red if it depletes).
   if (ret.length > 1) {
     drawPolyline(
       doc,
@@ -443,7 +443,7 @@ function drawChart(
     );
   }
 
-  // Marco inferior y eje.
+  // Bottom frame and axis.
   stroke(doc, LINE);
   doc.setLineWidth(0.8);
   doc.line(px0, py0 + ph, px0 + pw, py0 + ph);

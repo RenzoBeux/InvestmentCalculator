@@ -1,9 +1,9 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 
 /**
- * Como useState, pero el valor se guarda en localStorage y se rehidrata al
- * recargar. Para objetos se hace un merge superficial con `initial`, así
- * agregar campos nuevos no rompe los datos ya guardados de un usuario.
+ * Like useState, but the value is saved to localStorage and rehydrated on
+ * reload. For objects a shallow merge with `initial` is performed, so that
+ * adding new fields doesn't break a user's already-saved data.
  */
 export function usePersistedState<T>(
   key: string,
@@ -33,7 +33,7 @@ export function usePersistedState<T>(
     try {
       localStorage.setItem(key, JSON.stringify(value));
     } catch {
-      /* almacenamiento lleno o no disponible: seguimos sin persistir */
+      /* storage full or unavailable: continue without persisting */
     }
   }, [key, value]);
 

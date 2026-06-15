@@ -1,9 +1,9 @@
 /**
- * Grupo segmentado con presets + una opción "Personalizada" que revela un input
- * (el rendimiento o la tasa a mano). El estado activo lo maneja el padre: la
- * tasa de retiro usa un booleano aparte, mientras que la cartera "custom" es un
- * valor real del enum. Mantener este componente "tonto" evita una abstracción
- * con fugas. Emite las mismas clases `.seg`/`.custom-rate`, así el CSS no cambia.
+ * Segmented group with presets + a "Personalizada" option that reveals an input
+ * (the return or the rate, entered by hand). The active state is managed by the
+ * parent: the withdrawal rate uses a separate boolean, whereas the "custom"
+ * portfolio is an actual enum value. Keeping this component "dumb" avoids a
+ * leaky abstraction. It emits the same `.seg`/`.custom-rate` classes, so the CSS doesn't change.
  */
 import { type ReactNode } from "react";
 
@@ -14,14 +14,14 @@ interface Option<T> {
 
 interface Props<T extends string | number> {
   options: Option<T>[];
-  /** ¿El preset con este valor está activo? (false cuando se está en modo personalizado). */
+  /** Is the preset with this value active? (false when in custom mode). */
   isPresetActive: (value: T) => boolean;
   onSelectPreset: (value: T) => void;
   customActive: boolean;
   onSelectCustom: () => void;
   customLabel?: string;
   ariaLabel: string;
-  /** El input personalizado; se muestra solo cuando `customActive`. */
+  /** The custom input; shown only when `customActive`. */
   children?: ReactNode;
 }
 

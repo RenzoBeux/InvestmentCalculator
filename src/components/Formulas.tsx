@@ -1,16 +1,16 @@
 import type { ReactNode } from "react";
 
 /**
- * La matemática del modelo, en crudo. `HowItWorks` explica las *ideas*; esto
- * muestra las *fórmulas* exactas que corre `finance.ts`, una por una. Va
- * colapsado por defecto: el usuario casual no lo necesita, el curioso sí.
+ * The model's math, raw. `HowItWorks` explains the *ideas*; this
+ * shows the exact *formulas* that `finance.ts` runs, one by one. It's
+ * collapsed by default: the casual user doesn't need it, the curious one does.
  *
- * Cada fórmula refleja una línea concreta de `computeLifecycle` / sus helpers.
- * Si tocás el modelo allá, actualizá la fórmula acá.
+ * Each formula mirrors a specific line of `computeLifecycle` / its helpers.
+ * If you touch the model over there, update the formula here.
  */
 interface Formula {
   name: string;
-  /** La ecuación, con variables en cursiva (clase `var`). */
+  /** The equation, with variables in italics (`var` class). */
   expr: ReactNode;
   desc: string;
 }

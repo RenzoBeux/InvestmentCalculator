@@ -1,27 +1,27 @@
 /**
- * Construye las series del gráfico a partir del resultado del modelo. Puro: no
- * sabe de recharts ni de jsPDF, ni de edades. Cada superficie lo adapta después
- * (la pantalla arma filas con huecos `null`; el PDF mapea a puntos `[x, y]`).
+ * Builds the chart series from the model result. Pure: it knows nothing about
+ * recharts, jsPDF, or ages. Each surface adapts it afterward
+ * (the screen builds rows with `null` gaps; the PDF maps to `[x, y]` points).
  */
 import { type LifecycleResult } from "./finance";
 
-/** Un punto de la serie: el desfasaje en años desde hoy y su valor. */
+/** A point on the series: the offset in years from today and its value. */
 export interface SeriesPoint {
-  /** Años desde hoy (0 = hoy). Sumale la edad actual para obtener la edad. */
+  /** Years from today (0 = today). Add the current age to get the age. */
   yearOffset: number;
   value: number;
 }
 
 export interface ChartSeries {
-  /** Saldo al final de cada año de acumulación (offset 0..accYears). */
+  /** Balance at the end of each accumulation year (offset 0..accYears). */
   accumulation: SeriesPoint[];
-  /** Saldo durante el retiro (offset accYears..accYears+retLen). Vacío si no llega. */
+  /** Balance during retirement (offset accYears..accYears+retLen). Empty if it doesn't reach. */
   retirement: SeriesPoint[];
-  /** Años de aportes hasta jubilarse. */
+  /** Years of contributions until retirement. */
   accYears: number;
-  /** Años de retiro proyectados (largo de la serie de retiro menos el punto inicial). */
+  /** Projected retirement years (length of the retirement series minus the initial point). */
   retLen: number;
-  /** Total de años en el eje X (acumulación + retiro). */
+  /** Total years on the X axis (accumulation + retirement). */
   totalYears: number;
 }
 

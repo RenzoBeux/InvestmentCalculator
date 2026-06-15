@@ -1,14 +1,14 @@
 /**
- * Tema de la app: claro / oscuro / sistema, con persistencia.
+ * App theme: light / dark / system, with persistence.
  *
- * El atributo `data-theme` en <html> es la fuente de verdad para el CSS (ver el
- * bloque de tokens en styles.css). Recharts no lee variables CSS, así que el
- * contexto también expone un booleano `dark` ya resuelto para los colores del
- * gráfico. Un único <ThemeProvider> en App mantiene todo sincronizado: el toggle
- * del nav y el gráfico leen el mismo estado.
+ * The `data-theme` attribute on <html> is the source of truth for the CSS (see the
+ * tokens block in styles.css). Recharts doesn't read CSS variables, so the
+ * context also exposes an already-resolved `dark` boolean for the chart's
+ * colors. A single <ThemeProvider> in App keeps everything in sync: the nav
+ * toggle and the chart read the same state.
  *
- * El parpadeo inicial (FOUC) lo evita un script inline en index.html que setea
- * `data-theme` antes del primer pintado; este efecto solo lo mantiene al día.
+ * The initial flash (FOUC) is prevented by an inline script in index.html that sets
+ * `data-theme` before the first paint; this effect only keeps it up to date.
  */
 import {
   createContext,
@@ -25,7 +25,7 @@ export type ThemeChoice = "light" | "dark" | "system";
 interface ThemeContextValue {
   choice: ThemeChoice;
   setChoice: (choice: ThemeChoice) => void;
-  /** Oscuro resuelto (resuelve "system" contra el sistema operativo). */
+  /** Resolved dark (resolves "system" against the operating system). */
   dark: boolean;
 }
 
@@ -43,7 +43,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     "fire.theme",
     "system"
   );
-  // En modo "system" seguimos el cambio del sistema en vivo.
+  // In "system" mode we follow the system's change live.
   const [systemDark, setSystemDark] = useState(prefersDark);
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -55,9 +55,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const dark = choice === "system" ? systemDark : choice === "dark";
 
   useEffect(() => {
-    // Reflejamos el valor RESUELTO (no la elección): así el CSS solo necesita
-    // `:root` y `:root[data-theme="dark"]`, sin duplicar los tokens oscuros en
-    // una media query. El modo "system" sigue al sistema vía `systemDark`.
+    // We reflect the RESOLVED value (not the choice): this way the CSS only needs
+    // `:root` and `:root[data-theme="dark"]`, without duplicating the dark tokens in
+    // a media query. The "system" mode follows the system via `systemDark`.
     document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", dark ? META_DARK : META_LIGHT);

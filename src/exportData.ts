@@ -1,14 +1,14 @@
 /**
- * Exportar e importar el plan del usuario como un archivo JSON.
+ * Export and import the user's plan as a JSON file.
  *
- * "Guardar los datos" = bajar todo lo que el usuario cargó (inputs, supuestos,
- * moneda y edad) a un archivo, para poder volver a cargarlo más tarde o en otra
- * compu. La importación es defensiva: valida y sanea cada campo contra los
- * valores por defecto, así un archivo viejo, parcial o tocado a mano nunca rompe
- * la app — a lo sumo cae a los defaults.
+ * "Save the data" = download everything the user entered (inputs, assumptions,
+ * currency, and age) to a file, so it can be loaded again later or on another
+ * machine. Importing is defensive: it validates and sanitizes every field against
+ * the default values, so an old, partial, or hand-edited file never breaks the
+ * app — at worst it falls back to the defaults.
  *
- * Este archivo es puro y tipado salvo por los helpers de descarga/lectura, que
- * tocan el DOM del navegador. No depende de React.
+ * This file is pure and typed except for the download/read helpers, which
+ * touch the browser DOM. It does not depend on React.
  */
 
 import {
@@ -24,16 +24,16 @@ import { CURRENCIES, DEFAULT_CURRENCY } from "./format";
 import { planFileName } from "./dateStamp";
 
 /**
- * Versión del esquema del archivo. Subila si cambia la forma de los datos.
- * v2: se agregaron `monthlyGrowth` y `coastTargetAge` a los inputs.
- * v3: se agregó `solveFor` (modo de auto-cálculo). Los archivos v1/v2 siguen
- * cargando: los campos nuevos caen a sus valores por defecto ("timeline").
+ * File schema version. Bump it when the shape of the data changes.
+ * v2: added `monthlyGrowth` and `coastTargetAge` to the inputs.
+ * v3: added `solveFor` (auto-calc mode). v1/v2 files still load:
+ * the new fields fall back to their default values ("timeline").
  */
 export const EXPORT_VERSION = 3;
 
 const APP_MARKER = "planificador-fire";
 
-/** Todo lo que el usuario configura y queremos poder guardar/restaurar. */
+/** Everything the user configures that we want to be able to save/restore. */
 export interface PlanData {
   inputs: PlanInputs;
   assumptions: Assumptions;
@@ -41,7 +41,7 @@ export interface PlanData {
   currentAge: number;
 }
 
-/** Forma del archivo en disco: los datos más metadatos para identificarlo. */
+/** Shape of the file on disk: the data plus metadata to identify it. */
 export interface ExportFile extends PlanData {
   app: typeof APP_MARKER;
   version: number;
@@ -52,7 +52,7 @@ export type ImportResult =
   | { ok: true; data: PlanData }
   | { ok: false; error: string };
 
-/** Envuelve los datos con los metadatos del archivo (marca, versión, fecha). */
+/** Wraps the data with the file metadata (marker, version, date). */
 export function buildExportFile(data: PlanData): ExportFile {
   return {
     app: APP_MARKER,
@@ -65,12 +65,12 @@ export function buildExportFile(data: PlanData): ExportFile {
   };
 }
 
-/** Nombre de archivo con fecha: `plan-fire-2026-06-14.json`. */
+/** File name with date: `plan-fire-2026-06-14.json`. */
 export function exportFileName(date = new Date()): string {
   return planFileName("json", date);
 }
 
-/** Genera el JSON y dispara la descarga en el navegador. */
+/** Generates the JSON and triggers the download in the browser. */
 export function downloadPlanData(data: PlanData): void {
   const json = JSON.stringify(buildExportFile(data), null, 2);
   const blob = new Blob([json], { type: "application/json" });
@@ -84,7 +84,7 @@ export function downloadPlanData(data: PlanData): void {
   URL.revokeObjectURL(url);
 }
 
-/** Lee un `File` como texto (envuelve FileReader en una promesa). */
+/** Reads a `File` as text (wraps FileReader in a promise). */
 export function readFileAsText(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -94,7 +94,7 @@ export function readFileAsText(file: File): Promise<string> {
   });
 }
 
-/** Parsea y sanea el texto de un archivo importado. Nunca tira: devuelve ok/error. */
+/** Parses and sanitizes the text of an imported file. Never throws: returns ok/error. */
 export function parsePlanData(raw: string): ImportResult {
   let parsed: unknown;
   try {
@@ -121,7 +121,7 @@ export function parsePlanData(raw: string): ImportResult {
   return { ok: true, data };
 }
 
-// --------------------------------------------------------------- saneadores ---
+// --------------------------------------------------------------- sanitizers ---
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -132,10 +132,10 @@ function num(v: unknown, fallback: number): number {
 }
 
 function sanitizePlanData(obj: Record<string, unknown>): PlanData | null {
-  // Exigimos una señal fuerte de que esto es un plan y no un JSON cualquiera:
-  // o bien la marca de la app, o al menos dos campos con la forma esperada. Así
-  // un archivo con un solo campo suelto (p. ej. `{ "currency": "x" }`) no se
-  // toma por un plan y termina pisando todo con los valores por defecto.
+  // We require a strong signal that this is a plan and not just any JSON:
+  // either the app marker, or at least two fields with the expected shape. That way
+  // a file with a single stray field (e.g. `{ "currency": "x" }`) isn't
+  // mistaken for a plan and ends up overwriting everything with the default values.
   const signals = [
     isRecord(obj.inputs),
     isRecord(obj.assumptions),
@@ -176,7 +176,7 @@ function sanitizeInputs(v: unknown): PlanInputs {
     coastTargetAge: clampAge(
       num(o.coastTargetAge, DEFAULT_INPUTS.coastTargetAge)
     ),
-    // Lista blanca, no num(): cualquier cosa fuera del union cae a "timeline".
+    // Whitelist, not num(): anything outside the union falls back to "timeline".
     solveFor:
       o.solveFor === "monthly" || o.solveFor === "initial"
         ? o.solveFor

@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 
 /**
- * Input numérico que muestra y edita un valor como porcentaje (0.045 ↔ "4,5").
- * Guarda el texto mientras se tipea, así no se pierden los decimales, y se
- * resincroniza si el valor cambia desde afuera (presets, "Restablecer").
+ * Numeric input that displays and edits a value as a percentage (0.045 ↔ "4,5").
+ * Keeps the text while the user types, so decimals aren't lost, and
+ * resynchronizes if the value changes from the outside (presets, "Restablecer").
  */
 export function PercentInput({
   value,

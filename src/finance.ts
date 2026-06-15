@@ -1,24 +1,24 @@
 /**
- * Lógica financiera del planificador de retiro.
+ * Financial logic of the retirement planner.
  *
- * El modelo trabaja en términos REALES (poder de compra de hoy): el gasto se
- * mantiene constante y los rendimientos ya vienen con la inflación descontada.
- * Es la única forma honesta de proyectar varias décadas.
+ * The model works in REAL terms (today's purchasing power): spending stays
+ * constant and the returns already come with inflation discounted out.
+ * It's the only honest way to project several decades.
  *
- * Los supuestos ya no están hardcodeados: viven en `Assumptions` y el usuario
- * los puede editar desde la UI (panel "Ajustes avanzados"). Quien quiera tocar
- * el modelo en sí —no solo los números— lo hace en `computeLifecycle`.
+ * The assumptions are no longer hardcoded: they live in `Assumptions` and the
+ * user can edit them from the UI ("Ajustes avanzados" panel). Whoever wants to
+ * touch the model itself —not just the numbers— does it in `computeLifecycle`.
  *
- * Este archivo es puro y tipado: no toca el DOM ni React.
+ * This file is pure and typed: it doesn't touch the DOM or React.
  */
 
-/** Las tres carteras con un rendimiento predefinido (editable en ajustes). */
+/** The three portfolios with a predefined return (editable in settings). */
 export type PresetAllocation = "aggressive" | "balanced" | "conservative";
 
-/** Cartera elegida en el retiro: una de las predefinidas o una personalizada. */
+/** Portfolio chosen for retirement: one of the presets or a custom one. */
 export type Allocation = PresetAllocation | "custom";
 
-/** Cómo ingresa el usuario los rendimientos. */
+/** How the user enters the returns. */
 export type ReturnMode = "real" | "nominal";
 
 export const ALLOCATION_LABELS: Record<Allocation, string> = {
@@ -28,15 +28,15 @@ export const ALLOCATION_LABELS: Record<Allocation, string> = {
   custom: "Personalizada",
 };
 
-/** Solo las carteras predefinidas; "custom" se maneja aparte. */
+/** Only the preset portfolios; "custom" is handled separately. */
 export const ALLOCATIONS: PresetAllocation[] = ["aggressive", "balanced", "conservative"];
 
 /**
- * Perfil de retiro: un atajo que fija de una vez la tasa de retiro y la cartera,
- * ordenado de más a menos riesgo. Es una capa de presentación sobre esos dos
- * campos —no se guarda aparte—: el perfil activo se deriva de los valores
- * actuales con `deriveProfile`. "custom" (Personalizado) es "no coincide con
- * ningún preset, lo elige el usuario a mano".
+ * Retirement profile: a shortcut that sets the withdrawal rate and the portfolio
+ * in one go, ordered from most to least risk. It's a presentation layer over
+ * those two fields —it isn't stored separately—: the active profile is derived
+ * from the current values with `deriveProfile`. "custom" (Personalizado) means
+ * "doesn't match any preset, the user picks it by hand".
  */
 export type RetirementProfile =
   | "aggressive"
@@ -53,15 +53,15 @@ export const RETIREMENT_PROFILE_LABELS: Record<RetirementProfile, string> = {
   custom: "Personalizado",
 };
 
-/** Los valores que aplica cada perfil predefinido. */
+/** The values that each preset profile applies. */
 export interface ProfilePreset {
   withdrawalRate: number;
   allocation: PresetAllocation;
 }
 
 /**
- * Mapa perfil → (tasa de retiro, cartera). "moderate" coincide con los valores
- * por defecto (4% + 60/40), así que el plan por defecto arranca en "Moderado".
+ * Profile → (withdrawal rate, portfolio) map. "moderate" matches the default
+ * values (4% + 60/40), so the default plan starts on "Moderado".
  */
 export const RETIREMENT_PROFILES: Record<
   Exclude<RetirementProfile, "custom">,
@@ -73,7 +73,7 @@ export const RETIREMENT_PROFILES: Record<
   veryConservative: { withdrawalRate: 0.03, allocation: "conservative" },
 };
 
-/** Orden de los botones, de más a menos riesgo; "custom" va al final. */
+/** Button order, from most to least risk; "custom" goes last. */
 export const RETIREMENT_PROFILE_ORDER: RetirementProfile[] = [
   "aggressive",
   "moderate",
@@ -83,9 +83,9 @@ export const RETIREMENT_PROFILE_ORDER: RetirementProfile[] = [
 ];
 
 /**
- * Deriva el perfil activo a partir de los valores actuales. Si la tasa se cargó
- * a mano, la cartera es "custom", o la combinación no coincide con ningún preset,
- * el perfil es "custom".
+ * Derives the active profile from the current values. If the rate was entered
+ * by hand, the portfolio is "custom", or the combination doesn't match any
+ * preset, the profile is "custom".
  */
 export function deriveProfile(
   withdrawalRate: number,
@@ -109,34 +109,34 @@ export function deriveProfile(
 export type Trend = "grow" | "flat" | "decline";
 
 /**
- * Qué incógnita resuelve la calculadora.
- * - "timeline": el modo clásico. Fijás el aporte (y todo lo demás) y te decimos
- *   a qué edad / en cuántos años llegás a tu número.
- * - "monthly": fijás la edad de jubilación objetivo y despejamos el aporte
- *   mensual necesario para llegar justo a esa edad.
- * - "initial": fijás la edad y el aporte y despejamos con cuánta inversión
- *   inicial necesitás arrancar hoy.
+ * Which unknown the calculator solves for.
+ * - "timeline": the classic mode. You fix the contribution (and everything else)
+ *   and we tell you at what age / in how many years you reach your number.
+ * - "monthly": you fix the target retirement age and we solve for the monthly
+ *   contribution needed to land exactly at that age.
+ * - "initial": you fix the age and the contribution and we solve for how much
+ *   initial investment you need to start with today.
  */
 export type SolveFor = "timeline" | "monthly" | "initial";
 
 /**
- * Supuestos del modelo. Todos configurables desde la UI.
+ * Model assumptions. All configurable from the UI.
  *
- * Si `returnMode` es "nominal", los rendimientos de abajo se interpretan como
- * nominales y se convierten a reales descontando `inflation`. Si es "real", se
- * usan tal cual (la inflación se ignora).
+ * If `returnMode` is "nominal", the returns below are interpreted as nominal
+ * and converted to real by discounting out `inflation`. If it's "real", they're
+ * used as-is (inflation is ignored).
  */
 export interface Assumptions {
   returnMode: ReturnMode;
-  /** Inflación anual asumida (solo se usa en modo "nominal"). */
+  /** Assumed annual inflation (only used in "nominal" mode). */
   inflation: number;
-  /** Rendimiento anual mientras acumulás (supuesto editable, sin atar a un instrumento). */
+  /** Annual return while accumulating (editable assumption, not tied to any instrument). */
   accumulationReturn: number;
-  /** Rendimiento anual durante el retiro, según la cartera predefinida elegida. */
+  /** Annual return during retirement, according to the chosen preset portfolio. */
   retirementReturns: Record<PresetAllocation, number>;
-  /** Horizonte máximo de acumulación a simular (años). */
+  /** Maximum accumulation horizon to simulate (years). */
   maxAccumulationYears: number;
-  /** Años de retiro a proyectar en el gráfico. */
+  /** Years of retirement to project on the chart. */
   retirementChartYears: number;
 }
 
@@ -145,7 +145,7 @@ export const DEFAULT_ASSUMPTIONS: Assumptions = {
   inflation: 0.03,
   accumulationReturn: 0.06,
   retirementReturns: {
-    aggressive: 0.06, // 100% acciones
+    aggressive: 0.06, // 100% stocks
     balanced: 0.045, // 60 / 40
     conservative: 0.035, // 40 / 60
   },
@@ -153,42 +153,42 @@ export const DEFAULT_ASSUMPTIONS: Assumptions = {
   retirementChartYears: 45,
 };
 
-// Compatibilidad: nombres históricos que apuntan a los valores por defecto.
+// Compatibility: historical names that point to the default values.
 export const ACCUMULATION_REAL_RETURN = DEFAULT_ASSUMPTIONS.accumulationReturn;
 export const RETIREMENT_REAL_RETURNS = DEFAULT_ASSUMPTIONS.retirementReturns;
 
 export interface PlanInputs {
-  /** Inversión inicial, en dólares de hoy. */
+  /** Initial investment, in today's dollars. */
   initial: number;
-  /** Aporte mensual, en dólares de hoy. */
+  /** Monthly contribution, in today's dollars. */
   monthly: number;
   /**
-   * Crecimiento real anual del aporte (p. ej. 0.03 = +3% por año por encima de
-   * la inflación). 0 = aporte constante en poder de compra de hoy, que es como
-   * se comportaba el modelo antes de existir este campo. Siempre es real, sin
-   * importar `returnMode`, para no romper ese comportamiento por defecto.
+   * Annual real growth of the contribution (e.g. 0.03 = +3% per year above
+   * inflation). 0 = contribution constant in today's purchasing power, which is
+   * how the model behaved before this field existed. It's always real,
+   * regardless of `returnMode`, so as not to break that default behavior.
    */
   monthlyGrowth: number;
-  /** Gasto mensual deseado en el retiro, en dólares de hoy. */
+  /** Desired monthly spending in retirement, in today's dollars. */
   monthlySpend: number;
-  /** Tasa de retiro segura (p. ej. 0.04 = 4%). */
+  /** Safe withdrawal rate (e.g. 0.04 = 4%). */
   withdrawalRate: number;
-  /** Asignación de la cartera durante el retiro. */
+  /** Portfolio allocation during retirement. */
   retirementAllocation: Allocation;
   /**
-   * Rendimiento de la cartera cuando `retirementAllocation` es "custom".
-   * Se interpreta según `returnMode` (real o nominal), igual que los demás.
+   * Portfolio return when `retirementAllocation` is "custom".
+   * It's interpreted according to `returnMode` (real or nominal), like the rest.
    */
   customRetirementReturn: number;
   /**
-   * Edad objetivo de jubilación. La usa el cálculo de Coast FIRE y, en los modos
-   * de auto-cálculo (`solveFor` != "timeline"), es la meta sobre la que se
-   * despeja el aporte mensual o la inversión inicial.
+   * Target retirement age. Used by the Coast FIRE calculation and, in the
+   * auto-calc modes (`solveFor` != "timeline"), it's the goal against which the
+   * monthly contribution or the initial investment is solved.
    */
   coastTargetAge: number;
   /**
-   * Qué valor auto-calcula la app. Por defecto "timeline" (modo clásico, sin
-   * despeje), así los planes viejos se comportan igual que antes.
+   * Which value the app auto-calculates. Defaults to "timeline" (classic mode,
+   * no solving), so old plans behave the same as before.
    */
   solveFor: SolveFor;
 }
@@ -206,58 +206,58 @@ export const DEFAULT_INPUTS: PlanInputs = {
 };
 
 /**
- * Edad inicial por defecto. 0 NO es un default neutro: la UI trata `currentAge`
- * en 0 como "sin edad cargada", así que el valor por defecto real es 30.
+ * Default starting age. 0 is NOT a neutral default: the UI treats `currentAge`
+ * at 0 as "no age loaded", so the real default value is 30.
  */
 export const DEFAULT_AGE = 30;
 
 export interface LifecycleResult {
-  /** Cartera objetivo = gasto anual / tasa de retiro. */
+  /** Target portfolio = annual spending / withdrawal rate. */
   fireNumber: number;
-  /** ¿Se alcanza el objetivo dentro del horizonte de acumulación? */
+  /** Is the target reached within the accumulation horizon? */
   reached: boolean;
-  /** Años de aportes hasta alcanzar el número de retiro. */
+  /** Years of contributions until the retirement number is reached. */
   accumulationYears: number;
-  /** Saldo al final de cada año de acumulación (índice 0..accumulationYears). */
+  /** Balance at the end of each accumulation year (index 0..accumulationYears). */
   accumulationSeries: number[];
-  /** Rendimiento real aplicado en la acumulación. */
+  /** Real return applied during accumulation. */
   accumulationReturn: number;
-  /** Rendimiento real aplicado en el retiro. */
+  /** Real return applied during retirement. */
   retirementReturn: number;
-  /** Saldo al inicio del retiro y al final de cada año (índice 0..n). */
+  /** Balance at the start of retirement and at the end of each year (index 0..n). */
   retirementSeries: number[];
-  /** Si la cartera crece, se mantiene o se agota durante el retiro. */
+  /** Whether the portfolio grows, stays flat, or depletes during retirement. */
   trend: Trend;
-  /** Años dentro del retiro hasta agotarse (solo si la tendencia es "decline"). */
+  /** Years into retirement until depletion (only if the trend is "decline"). */
   depletionYear: number | null;
   /**
-   * Dinero propio aportado al alcanzar el número (o al final del horizonte si no
-   * se alcanza): inicial + suma de todos los aportes mensuales.
+   * Own money contributed when the number is reached (or at the end of the
+   * horizon if not reached): initial + sum of all monthly contributions.
    */
   contributedAtFire: number;
-  /** Lo que generó el rendimiento: saldo − aportes. El "interés compuesto". */
+  /** What the return generated: balance − contributions. The "compound interest". */
   growthAtFire: number;
 }
 
 /**
- * Convierte un rendimiento al equivalente real según el modo elegido.
- * En modo nominal: r_real = (1 + r_nom) / (1 + inflación) − 1 (ecuación de Fisher).
+ * Converts a return to its real equivalent according to the chosen mode.
+ * In nominal mode: r_real = (1 + r_nom) / (1 + inflation) − 1 (Fisher equation).
  */
 export function effectiveRealReturn(annualReturn: number, assumptions: Assumptions): number {
   if (assumptions.returnMode === "real") return annualReturn;
   return (1 + annualReturn) / (1 + Math.max(0, assumptions.inflation)) - 1;
 }
 
-/** Número de retiro: cuánto capital necesitás para vivir de la cartera. */
+/** Retirement number: how much capital you need to live off the portfolio. */
 export function fireNumber(monthlySpend: number, withdrawalRate: number): number {
   if (withdrawalRate <= 0) return Infinity;
   return (Math.max(0, monthlySpend) * 12) / withdrawalRate;
 }
 
 /**
- * Número de Coast FIRE: el capital que, SIN aportar más, capitaliza hasta el
- * número de retiro `fireTarget` en `yearsToTarget` años al rendimiento dado.
- * Si ya estás en la edad objetivo (o pasaste), necesitás el número completo.
+ * Coast FIRE number: the capital that, WITHOUT contributing more, compounds up
+ * to the retirement number `fireTarget` in `yearsToTarget` years at the given
+ * return. If you're already at the target age (or past it), you need the full number.
  */
 export function coastNumber(
   fireTarget: number,
@@ -269,18 +269,18 @@ export function coastNumber(
   return fireTarget / Math.pow(1 + annualReturn, yearsToTarget);
 }
 
-// ----------------------------------------------------------- Auto-cálculo ---
-// El despeje (modos "monthly" / "initial") es el INVERSO de la acumulación. La
-// clave: el saldo al cabo de N años es AFÍN en el valor a despejar
-//   saldo(N) = inicial · crecimientoDelInicial + aporte · factorDelAporte
-// así que alcanza con evaluar la recurrencia en dos puntos para recuperar la
-// recta y despejar exacto, sin tanteo. Para que el resultado sea consistente
-// con `computeLifecycle`, replicamos su recurrencia mes a mes al pie de la letra.
+// ------------------------------------------------------------- Auto-calc ---
+// The solve (modes "monthly" / "initial") is the INVERSE of accumulation. The
+// key: the balance after N years is AFFINE in the value being solved for
+//   balance(N) = initial · initialGrowth + contribution · contributionFactor
+// so it's enough to evaluate the recurrence at two points to recover the line
+// and solve exactly, no searching. So that the result is consistent with
+// `computeLifecycle`, we replicate its month-by-month recurrence to the letter.
 
 /**
- * Corre la misma recurrencia de acumulación que `computeLifecycle`, durante
- * exactamente `years` años (sin cortar al alcanzar el objetivo), y devuelve el
- * saldo final. Puro: no toca estado ni React.
+ * Runs the same accumulation recurrence as `computeLifecycle`, for exactly
+ * `years` years (without cutting off when the target is reached), and returns
+ * the final balance. Pure: it doesn't touch state or React.
  */
 function accumulateBalance(
   initial: number,
@@ -302,24 +302,24 @@ function accumulateBalance(
 export type SolveStatus = "ok" | "alreadyThere" | "noHorizon" | "unreachable";
 
 export interface SolveResult {
-  /** El valor despejado (aporte mensual o inversión inicial), siempre >= 0. */
+  /** The solved value (monthly contribution or initial investment), always >= 0. */
   value: number;
-  /** Por qué el resultado es lo que es, para que la UI muestre el mensaje justo. */
+  /** Why the result is what it is, so the UI shows the right message. */
   status: SolveStatus;
-  /** El número de retiro usado, para mostrarlo sin recalcular. */
+  /** The retirement number used, to display it without recalculating. */
   target: number;
 }
 
-// Empujamos el valor despejado un pelo hacia arriba (relativo al objetivo) para
-// cruzar el chequeo estricto `saldo >= número` de la simulación: sin esto, el
-// residuo de punto flotante deja el saldo un centésimo por debajo y el modelo
-// "se jubila" en el año N+1 en vez del N.
+// We nudge the solved value a hair upward (relative to the target) to cross the
+// simulation's strict `balance >= number` check: without this, the floating-point
+// residue leaves the balance a hundredth below and the model "retires" in year
+// N+1 instead of N.
 const SOLVE_NUDGE = 1e-6;
 
 /**
- * Aporte mensual necesario para alcanzar el número de retiro EXACTAMENTE en
- * `years` años, con todo lo demás fijo. Ignora `inputs.monthly` (es lo que
- * despeja). Usa el mismo rendimiento real efectivo que la simulación.
+ * Monthly contribution needed to reach the retirement number EXACTLY in `years`
+ * years, with everything else fixed. Ignores `inputs.monthly` (that's what it
+ * solves for). Uses the same effective real return as the simulation.
  */
 export function solveMonthlyForYears(
   inputs: PlanInputs,
@@ -333,7 +333,7 @@ export function solveMonthlyForYears(
   const monthlyRate =
     effectiveRealReturn(assumptions.accumulationReturn, assumptions) / 12;
   const g = inputs.monthlyGrowth;
-  // Saldo solo con el inicial (aporte 0) y aporte unitario (factor de la recta).
+  // Balance with the initial only (contribution 0) and a unit contribution (line factor).
   const seed = accumulateBalance(Math.max(0, inputs.initial), 0, years, monthlyRate, g);
   if (seed >= target) return { value: 0, status: "alreadyThere", target };
   const factor = accumulateBalance(0, 1, years, monthlyRate, g);
@@ -344,8 +344,8 @@ export function solveMonthlyForYears(
 }
 
 /**
- * Inversión inicial necesaria para alcanzar el número de retiro en `years` años,
- * con el aporte mensual y todo lo demás fijo. Ignora `inputs.initial`.
+ * Initial investment needed to reach the retirement number in `years` years,
+ * with the monthly contribution and everything else fixed. Ignores `inputs.initial`.
  */
 export function solveInitialForYears(
   inputs: PlanInputs,
@@ -361,7 +361,7 @@ export function solveInitialForYears(
   const g = inputs.monthlyGrowth;
   const fromMonthly = accumulateBalance(0, Math.max(0, inputs.monthly), years, monthlyRate, g);
   if (fromMonthly >= target) return { value: 0, status: "alreadyThere", target };
-  // Factor del inicial = (1 + r/12)^(12·años); lo sacamos de la misma recurrencia.
+  // Initial factor = (1 + r/12)^(12·years); we get it from the same recurrence.
   const lumpFactor = accumulateBalance(1, 0, years, monthlyRate, g);
   if (lumpFactor <= 0) return { value: 0, status: "unreachable", target };
 
@@ -370,9 +370,9 @@ export function solveInitialForYears(
 }
 
 /**
- * Resuelve el despeje activo (según `inputs.solveFor`) para mostrarlo en la UI.
- * Devuelve null en modo "timeline" o si no hay edad cargada (sin edad no hay
- * horizonte: el despeje es por edad de jubilación).
+ * Resolves the active solve (according to `inputs.solveFor`) for display in the
+ * UI. Returns null in "timeline" mode or if there's no age loaded (no age means
+ * no horizon: the solve is by retirement age).
  */
 export function resolveSolve(
   inputs: PlanInputs,
@@ -387,11 +387,11 @@ export function resolveSolve(
 }
 
 /**
- * Inyecta el valor despejado en los inputs antes de simular, para que el
- * gráfico, los stats, el veredicto y el PDF cuenten todos la misma historia.
- * NUNCA muta el estado: el aporte/inicial que tipeó el usuario queda intacto en
- * `inputs` y se restaura al volver a "timeline". En "timeline", sin edad, o si
- * el objetivo es inalcanzable, devuelve los inputs/supuestos tal cual.
+ * Injects the solved value into the inputs before simulating, so the chart, the
+ * stats, the verdict, and the PDF all tell the same story. NEVER mutates state:
+ * the contribution/initial the user typed stays intact in `inputs` and is
+ * restored when switching back to "timeline". In "timeline", with no age, or if
+ * the target is unreachable, it returns the inputs/assumptions as-is.
  */
 export function applySolve(
   inputs: PlanInputs,
@@ -403,8 +403,8 @@ export function applySolve(
     return { inputs, assumptions };
   }
   const years = inputs.coastTargetAge - currentAge;
-  // Si la edad objetivo cae más allá del horizonte por defecto, lo ampliamos
-  // para que la simulación hacia adelante alcance a dibujar hasta esa edad.
+  // If the target age falls beyond the default horizon, we extend it so the
+  // forward simulation reaches far enough to draw up to that age.
   const reachAssumptions =
     years > assumptions.maxAccumulationYears
       ? { ...assumptions, maxAccumulationYears: years }
@@ -417,8 +417,8 @@ export function applySolve(
 }
 
 /**
- * Simula el ciclo completo: acumulación (capitalización mensual) hasta el número
- * de retiro, y luego el retiro (retiros anuales) con la cartera elegida.
+ * Simulates the full cycle: accumulation (monthly compounding) up to the
+ * retirement number, then retirement (annual withdrawals) with the chosen portfolio.
  */
 export function computeLifecycle(
   inputs: PlanInputs,
@@ -430,8 +430,8 @@ export function computeLifecycle(
   const target = fireNumber(inputs.monthlySpend, inputs.withdrawalRate);
 
   const accumulationReturn = effectiveRealReturn(assumptions.accumulationReturn, assumptions);
-  // La cartera "custom" usa el rendimiento que el usuario cargó a mano; las
-  // demás lo toman de los supuestos según la mezcla elegida.
+  // The "custom" portfolio uses the return the user entered by hand; the others
+  // take it from the assumptions according to the chosen mix.
   const retirementRaw =
     inputs.retirementAllocation === "custom"
       ? inputs.customRetirementReturn
@@ -440,10 +440,10 @@ export function computeLifecycle(
   const maxYears = Math.max(1, Math.round(assumptions.maxAccumulationYears));
   const chartYears = Math.max(1, Math.round(assumptions.retirementChartYears));
 
-  // --- Fase de acumulación ---
-  // El aporte arranca en `monthly` y crece `monthlyGrowth` (real) a fin de cada
-  // año. Llevamos la cuenta de cuánto pusiste vos (`contributed`) para separar el
-  // capital propio del interés compuesto.
+  // --- Accumulation phase ---
+  // The contribution starts at `monthly` and grows by `monthlyGrowth` (real) at
+  // the end of each year. We track how much you put in (`contributed`) to
+  // separate your own capital from compound interest.
   const monthlyRate = accumulationReturn / 12;
   const monthlyGrowth = inputs.monthlyGrowth;
   const accumulationSeries: number[] = [initial];
@@ -464,7 +464,7 @@ export function computeLifecycle(
           reached = true;
           break;
         }
-        // El aporte sube para el año siguiente.
+        // The contribution rises for the following year.
         currentMonthly *= 1 + monthlyGrowth;
       }
     }
@@ -486,20 +486,20 @@ export function computeLifecycle(
     };
   }
 
-  // --- Fase de retiro ---
-  // El saldo evoluciona como bal_{n+1} = bal_n * (1 + r) - gasto.
-  // Su punto de equilibrio es gasto / r: por encima crece, por debajo se agota.
+  // --- Retirement phase ---
+  // The balance evolves as bal_{n+1} = bal_n * (1 + r) - spending.
+  // Its break-even point is spending / r: above it grows, below it depletes.
   const start = accumulationSeries[accumulationSeries.length - 1];
 
   let trend: Trend;
   let depletionYear: number | null = null;
 
   if (annualSpend <= 0) {
-    // Sin retiros (gasto 0) la cartera no se agota nunca.
+    // With no withdrawals (spending 0) the portfolio never depletes.
     trend = retirementReturn > 0 ? "grow" : "flat";
   } else if (retirementReturn > 0) {
-    // Con rendimiento positivo hay un punto de equilibrio (gasto / r): por
-    // encima la cartera crece sola, por debajo se va agotando.
+    // With a positive return there's a break-even point (spending / r): above
+    // it the portfolio grows on its own, below it gradually depletes.
     const fixedPoint = annualSpend / retirementReturn;
     if (start > fixedPoint + 1) {
       trend = "grow";
@@ -512,25 +512,25 @@ export function computeLifecycle(
       );
     }
   } else {
-    // Rendimiento real <= 0: la cartera no genera nada para cubrir el gasto, así
-    // que siempre se agota. La fórmula cerrada sigue valiendo con el punto de
-    // equilibrio real (negativo); en r = 0 el agotamiento es lineal.
+    // Real return <= 0: the portfolio generates nothing to cover the spending,
+    // so it always depletes. The closed-form formula still holds with the real
+    // (negative) break-even point; at r = 0 the depletion is linear.
     trend = "decline";
     if (retirementReturn === 0) {
       depletionYear = Math.ceil(start / annualSpend);
     } else if (retirementReturn > -1) {
-      const fixedPoint = annualSpend / retirementReturn; // negativo
+      const fixedPoint = annualSpend / retirementReturn; // negative
       depletionYear = Math.ceil(
         Math.log(fixedPoint / (fixedPoint - start)) / Math.log(1 + retirementReturn)
       );
     } else {
-      // 1 + r <= 0 (rendimiento <= -100%): degenerado, inalcanzable desde la UI.
+      // 1 + r <= 0 (return <= -100%): degenerate, unreachable from the UI.
       depletionYear = Math.ceil(start / annualSpend);
     }
   }
 
-  // Red de seguridad: ningún camino debe dejar un año de agotamiento no finito
-  // (evita que un NaN/Infinity se filtre al gráfico o al texto del veredicto).
+  // Safety net: no path should leave a non-finite depletion year (prevents a
+  // NaN/Infinity from leaking into the chart or the verdict text).
   if (depletionYear != null && !Number.isFinite(depletionYear)) {
     depletionYear = null;
   }

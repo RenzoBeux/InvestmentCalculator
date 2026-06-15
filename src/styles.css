@@ -21,9 +21,9 @@
   --content: 820px;
 }
 
-/* El tema lo resuelve JS (ver useTheme.tsx) y lo refleja en data-theme, sin
-   importar si la elección fue clara/oscura o "según el sistema". Por eso acá
-   solo hace falta el bloque oscuro explícito; no se duplica en una media query. */
+/* JS resolves the theme (see useTheme.tsx) and reflects it on data-theme,
+   regardless of whether the choice was light/dark or "follow the system". So here
+   we only need the explicit dark block; it isn't duplicated in a media query. */
 :root[data-theme="dark"] {
   color-scheme: dark;
   --bg: #15130e;
@@ -64,7 +64,7 @@ a {
   color: inherit;
 }
 
-/* Anillo de foco visible y consistente para navegación con teclado. */
+/* Visible and consistent focus ring for keyboard navigation. */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
@@ -191,7 +191,7 @@ summary:focus-visible {
 }
 
 @media (max-width: 560px) {
-  /* Alineamos el borde del nav con el de las secciones (también a 1rem). */
+  /* Align the nav edge with the sections' edge (also at 1rem). */
   .nav-inner {
     padding-left: 1rem;
     padding-right: 1rem;
@@ -202,12 +202,12 @@ summary:focus-visible {
   .nav-links a:not(.nav-cta) {
     display: none;
   }
-  /* En un nav de teléfono el nombre de marca no entra junto al CTA y el
-     selector de tema; dejamos solo el logo (que igual linkea al inicio). */
+  /* On a phone nav the brand name doesn't fit alongside the CTA and the
+     theme selector; we keep only the logo (which still links to the top). */
   .brand-name {
     display: none;
   }
-  /* Selector de tema con áreas táctiles más cómodas. */
+  /* Theme selector with more comfortable touch targets. */
   .theme-toggle {
     gap: 4px;
   }
@@ -247,8 +247,8 @@ summary:focus-visible {
 .hero h1 {
   font-family: var(--font-display);
   font-weight: 500;
-  /* Piso más bajo y más peso de vw: en teléfonos escala con la pantalla en vez
-     de quedar clavado en el piso y romper en cinco líneas apretadas. */
+  /* Lower floor and more vw weight: on phones it scales with the screen instead
+     of getting stuck at the floor and breaking into five cramped lines. */
   font-size: clamp(1.85rem, 7vw, 3.3rem);
   line-height: 1.12;
   letter-spacing: -0.015em;
@@ -361,7 +361,7 @@ summary:focus-visible {
   margin-bottom: 0;
 }
 
-/* Controles que ocupan todo el ancho del formulario (segmentos, notas largas). */
+/* Controls that span the full width of the form (segments, long notes). */
 .field-wide {
   grid-column: 1 / -1;
 }
@@ -454,7 +454,7 @@ summary:focus-visible {
   white-space: normal;
 }
 
-/* Caret apuntando al botón (i). */
+/* Caret pointing at the (i) button. */
 .infotip-bubble::after {
   content: "";
   position: absolute;
@@ -468,8 +468,8 @@ summary:focus-visible {
   transform: translateY(50%) rotate(45deg);
 }
 
-/* El (i) vive dentro de un <label>, así que reseteamos el <strong> para que no
-   herede el estilo serif grande de los valores de los campos. */
+/* The (i) lives inside a <label>, so we reset the <strong> so it doesn't
+   inherit the large serif style of the field values. */
 .field > label .infotip-bubble strong,
 .infotip-bubble strong {
   font-family: var(--font-ui);
@@ -486,10 +486,10 @@ summary:focus-visible {
   line-height: 1.5;
 }
 
-/* Grupos de input: la moneda, la edad y los porcentajes comparten un recuadro
-   con borde donde el afijo vive DENTRO de la caja (el símbolo de moneda como
-   prefijo; "años"/"%" como sufijo). El borde lo aporta el contenedor, así todos
-   los controles quedan full-width y alineados borde a borde en la grilla. */
+/* Input groups: money, age, and percentages share a bordered box where the
+   affix lives INSIDE the box (the currency symbol as a prefix; "años"/"%" as a
+   suffix). The container provides the border, so all the controls stay
+   full-width and aligned edge to edge in the grid. */
 .money,
 .years-input,
 .pct-input {
@@ -503,7 +503,7 @@ summary:focus-visible {
   padding: 0 0.7rem;
 }
 
-/* Anillo de foco sobre el grupo entero; el input cede el suyo (más abajo). */
+/* Focus ring around the whole group; the input gives up its own (below). */
 .money:focus-within,
 .years-input:focus-within,
 .pct-input:focus-within {
@@ -511,7 +511,7 @@ summary:focus-visible {
   outline-offset: 1px;
 }
 
-/* El input dentro de un grupo suelta su propio borde/fondo: lo aporta el grupo. */
+/* The input inside a group drops its own border/background: the group provides it. */
 .money input[type="number"],
 .years-input input[type="number"],
 .pct-input input[type="number"] {
@@ -530,7 +530,7 @@ summary:focus-visible {
   outline: none;
 }
 
-/* El afijo: símbolo de moneda (prefijo) o "años"/"%" (sufijo). */
+/* The affix: currency symbol (prefix) or "años"/"%" (suffix). */
 .money span,
 .years-input span,
 .pct-input span {
@@ -585,7 +585,7 @@ input[type="range"]::-moz-range-thumb {
 
 .select {
   font-family: var(--font-ui);
-  /* 16px: por debajo de eso iOS Safari hace zoom al enfocar el desplegable. */
+  /* 16px: below that, iOS Safari zooms when focusing the dropdown. */
   font-size: 1rem;
   color: var(--ink);
   background: var(--bg);
@@ -619,7 +619,7 @@ input[type="range"]::-moz-range-thumb {
   color: var(--muted);
 }
 
-/* Acá el grupo no llena la fila: queda compacto, en línea con su botón. */
+/* Here the group doesn't fill the row: it stays compact, inline with its button. */
 .custom-rate .pct-input input {
   flex: none;
   width: 64px;
@@ -648,9 +648,9 @@ input[type="range"]::-moz-range-thumb {
   border-color: var(--ink);
 }
 
-/* ------------------------------------------------- Campo auto-calculado --- */
-/* En los modos de despeje, el input editable se reemplaza por esta tarjeta de
-   solo lectura con el valor que la calculadora resolvió. */
+/* ------------------------------------------------- Auto-calculated field --- */
+/* In the solve-for modes, the editable input is replaced by this read-only
+   card showing the value the calculator solved for. */
 .solved-pill {
   font-family: var(--font-ui);
   font-size: 0.62rem;
@@ -666,7 +666,7 @@ input[type="range"]::-moz-range-thumb {
 .solved-value {
   display: flex;
   align-items: baseline;
-  /* Alto similar al del input de dinero para que el grid no salte al alternar. */
+  /* Height similar to the money input so the grid doesn't jump when toggling. */
   min-height: 2.5rem;
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--accent);
@@ -679,7 +679,7 @@ input[type="range"]::-moz-range-thumb {
   color: var(--ink);
 }
 
-/* Sin resultado válido (objetivo imposible o falta la edad): tarjeta apagada. */
+/* No valid result (impossible target or missing age): dimmed card. */
 .solved-value.is-empty {
   border-color: var(--line-strong);
   background: var(--surface-2);
@@ -715,7 +715,7 @@ input[type="range"]::-moz-range-thumb {
   letter-spacing: -0.01em;
 }
 
-/* ----------------------------------------- Aportes vs. interés (breakdown) */
+/* ----------------------------------------- Contributions vs. interest (breakdown) */
 .breakdown {
   margin-bottom: 0.85rem;
 }
@@ -804,7 +804,7 @@ input[type="range"]::-moz-range-thumb {
 
 .chart-wrap {
   width: 100%;
-  /* Más bajo en pantallas angostas para que las etiquetas no se amontonen. */
+  /* Shorter on narrow screens so the labels don't crowd together. */
   height: clamp(260px, 56vw, 360px);
 }
 
@@ -908,8 +908,8 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
-/* Los grupos .money / .years-input / .pct-input se estilan juntos más arriba
-   (recuadro con afijo adentro). Acá solo quedan los ajustes por contexto. */
+/* The .money / .years-input / .pct-input groups are styled together above
+   (bordered box with the affix inside). Only context-specific tweaks remain here. */
 
 .ret-returns {
   display: grid;
@@ -1049,7 +1049,7 @@ input[type="range"]::-moz-range-thumb {
   gap: 0.25rem;
 }
 
-/* El eyebrow ya trae su propio margen inferior; acá lo anulamos. */
+/* The eyebrow already brings its own bottom margin; here we cancel it out. */
 .math-summary-text .eyebrow {
   margin-bottom: 0;
 }
@@ -1273,7 +1273,7 @@ input[type="range"]::-moz-range-thumb {
   color: var(--bad);
 }
 
-/* Para inputs ocultos (file picker) que siguen siendo accesibles. */
+/* For hidden inputs (file picker) that remain accessible. */
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -1286,16 +1286,16 @@ input[type="range"]::-moz-range-thumb {
   border: 0;
 }
 
-/* ============================================================== Táctil ==== */
-/* Feedback inmediato al tocar: sin hover, el :active confirma el toque (importa
-   en una calculadora donde cada toque cambia un número). */
+/* ============================================================== Touch ==== */
+/* Immediate feedback on tap: without hover, :active confirms the touch (it matters
+   in a calculator where every tap changes a number). */
 .seg button:active,
 .theme-toggle button:active {
   transform: translateY(1px);
 }
 
-/* En pantallas táctiles el :hover queda "pegado" tras un toque; neutralizamos
-   los hovers puramente decorativos para que el borde no quede fijo. */
+/* On touch screens :hover stays "stuck" after a tap; we neutralize the
+   purely decorative hovers so the border doesn't stay fixed. */
 @media (hover: none) {
   .seg button:hover {
     border-color: var(--line);
@@ -1305,12 +1305,12 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
-/* ===================================================== Ajuste a teléfonos = */
-/* Todo lo fino de pantallas chicas, en un solo lugar. El paso a una columna de
-   las grillas (.panel, .adv-grid, .ret-returns) y el nav ya se resuelven más
-   arriba, cerca de cada componente. */
+/* ===================================================== Phone tuning = */
+/* All the small-screen fine-tuning, in one place. The collapse of the grids
+   (.panel, .adv-grid, .ret-returns) to a single column and the nav are already
+   handled above, near each component. */
 @media (max-width: 560px) {
-  /* Márgenes de sección: recuperamos ancho útil y bajamos el aire vertical. */
+  /* Section margins: reclaim usable width and reduce vertical breathing room. */
   .hero {
     padding: 2.5rem 1rem 2rem;
   }
@@ -1323,7 +1323,7 @@ input[type="range"]::-moz-range-thumb {
     padding: 2.25rem 1rem 2rem;
   }
 
-  /* Tipografía: cuerpo del hero y textos chicos, un punto más legibles. */
+  /* Typography: hero body and small text, a touch more legible. */
   .hero p {
     font-size: 1rem;
   }
@@ -1332,7 +1332,7 @@ input[type="range"]::-moz-range-thumb {
     font-size: 0.82rem;
   }
 
-  /* Stats: dos por fila en vez de una tarjeta ancha y medio vacía. */
+  /* Stats: two per row instead of one wide, half-empty card. */
   .stats {
     grid-template-columns: 1fr 1fr;
     gap: 0.6rem;
@@ -1344,13 +1344,13 @@ input[type="range"]::-moz-range-thumb {
     font-size: 1.2rem;
   }
 
-  /* La tarjeta del gráfico cede padding lateral para que el plot respire. */
+  /* The chart card gives up side padding so the plot can breathe. */
   .chart-card {
     padding: 1rem 0.55rem 0.75rem;
   }
 
-  /* Controles segmentados con alto táctil ~44px; el input "Personalizada" baja
-     a su propia fila, pegado a su botón, en vez de soltarse al envolver. */
+  /* Segmented controls with a ~44px touch height; the "Personalizada" input drops
+     to its own row, attached to its button, instead of breaking loose on wrap. */
   .seg {
     gap: 0.55rem;
   }
@@ -1361,7 +1361,7 @@ input[type="range"]::-moz-range-thumb {
     flex-basis: 100%;
   }
 
-  /* El (i) mantiene su círculo de 16px pero gana un área tocable de ~44px. */
+  /* The (i) keeps its 16px circle but gains a ~44px tappable area. */
   .infotip-btn {
     position: relative;
   }
@@ -1371,8 +1371,8 @@ input[type="range"]::-moz-range-thumb {
     inset: -14px;
   }
 
-  /* El globo de ayuda se ancla al pie de la pantalla: así nunca se corta contra
-     el borde derecho, sin importar dónde caiga el (i). */
+  /* The help bubble anchors to the bottom of the screen: this way it never gets
+     clipped against the right edge, no matter where the (i) falls. */
   .infotip-bubble {
     position: fixed;
     left: 1rem;
@@ -1386,7 +1386,7 @@ input[type="range"]::-moz-range-thumb {
     display: none;
   }
 
-  /* Paneles colapsables (avanzados / fórmulas): menos doble-sangría al apilarse. */
+  /* Collapsible panels (advanced / formulas): less double-indentation when stacked. */
   .advanced > summary,
   .math-details > summary {
     padding: 0.95rem 1.1rem;

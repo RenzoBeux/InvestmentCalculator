@@ -1,19 +1,19 @@
 /**
- * Formato de moneda y porcentajes.
+ * Currency and percentage formatting.
  *
- * La app es multi-moneda: el usuario elige una y todos los importes se muestran
- * con el símbolo y la convención local correspondientes. Sumá monedas a
- * `CURRENCIES` sin tocar el resto de la app.
+ * The app is multi-currency: the user picks one and all amounts are shown
+ * with the corresponding symbol and local convention. Add currencies to
+ * `CURRENCIES` without touching the rest of the app.
  */
 
 export interface CurrencyOption {
-  /** Código ISO 4217. */
+  /** ISO 4217 code. */
   code: string;
-  /** Símbolo corto para prefijar inputs (p. ej. "US$"). */
+  /** Short symbol to prefix inputs (e.g. "US$"). */
   symbol: string;
-  /** Nombre legible. */
+  /** Human-readable name. */
   label: string;
-  /** Locale para Intl.NumberFormat. */
+  /** Locale for Intl.NumberFormat. */
   locale: string;
 }
 
@@ -34,7 +34,7 @@ export function currencyByCode(code: string): CurrencyOption {
   return CURRENCIES.find((c) => c.code === code) ?? CURRENCIES[0];
 }
 
-/** Construye un formateador de moneda sin decimales para el código dado. */
+/** Builds a currency formatter without decimals for the given code. */
 export function makeCurrencyFormatter(code: string): Intl.NumberFormat {
   const c = currencyByCode(code);
   return new Intl.NumberFormat(c.locale, {
@@ -44,7 +44,7 @@ export function makeCurrencyFormatter(code: string): Intl.NumberFormat {
   });
 }
 
-/** Etiquetas cortas para el eje del gráfico (p. ej. "$1,2M", "$340k"). */
+/** Short labels for the chart axis (e.g. "$1,2M", "$340k"). */
 export function makeAxisFormatter(code: string): (v: number) => string {
   const sym = currencyByCode(code).symbol;
   const prefix = sym.endsWith("$") || sym.length <= 2 ? sym : sym + " ";
@@ -57,7 +57,7 @@ export function makeAxisFormatter(code: string): (v: number) => string {
       : `${prefix}${fmt(v)}`;
 }
 
-/** Porcentaje en formato local español: 0.045 → "4,5%". */
+/** Percentage in Spanish local format: 0.045 → "4,5%". */
 export function formatPct(x: number, decimals = 1): string {
   const v = x * 100;
   const s = Number.isInteger(v) ? String(v) : v.toFixed(decimals);

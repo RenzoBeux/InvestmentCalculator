@@ -1,9 +1,9 @@
 import { useId } from "react";
 
 /**
- * Logo de marca: una calculadora de inversión. En la pantalla, la trayectoria
- * que sube (el "fire" de FIRE); el botón "=" en dorado es el número de retiro.
- * Mismo arte que el favicon (public/favicon.svg).
+ * Brand logo: an investment calculator. On the screen, the upward-rising
+ * trajectory (the "fire" in FIRE); the gold "=" button is the retirement number.
+ * Same artwork as the favicon (public/favicon.svg).
  */
 export function BrandMark({ size = 32 }: { size?: number }) {
   const tile = useId();
@@ -26,15 +26,15 @@ export function BrandMark({ size = 32 }: { size?: number }) {
 
       {/* Tile */}
       <rect x="0" y="0" width="64" height="64" rx="14" fill={`url(#${tile})`} />
-      {/* Brillo sutil arriba */}
+      {/* Subtle highlight at the top */}
       <rect x="0" y="0" width="64" height="30" rx="14" fill="#ffffff" opacity="0.07" />
 
-      {/* Cuerpo de la calculadora */}
+      {/* Calculator body */}
       <rect x="17" y="11" width="30" height="42" rx="5.5" fill="#faf6ec" />
 
-      {/* Pantalla */}
+      {/* Screen */}
       <rect x="21" y="15.5" width="22" height="12" rx="2.5" fill="#16140f" />
-      {/* Trayectoria que sube: el crecimiento de la inversión (FIRE) */}
+      {/* Upward-rising trajectory: investment growth (FIRE) */}
       <polyline
         points="23.5,24 28,21.4 31.5,22.7 36,18.4 40.5,17.2"
         fill="none"
@@ -45,7 +45,7 @@ export function BrandMark({ size = 32 }: { size?: number }) {
       />
       <circle cx="40.5" cy="17.2" r="1.8" fill="#e8b53e" />
 
-      {/* Teclado */}
+      {/* Keypad */}
       <g fill="#d9d0be">
         <rect x="21.8" y="31.4" width="5.2" height="5.2" rx="1.4" />
         <rect x="29.4" y="31.4" width="5.2" height="5.2" rx="1.4" />
@@ -56,7 +56,7 @@ export function BrandMark({ size = 32 }: { size?: number }) {
         <rect x="21.8" y="45.4" width="5.2" height="5.2" rx="1.4" />
         <rect x="29.4" y="45.4" width="5.2" height="5.2" rx="1.4" />
       </g>
-      {/* Botón "=" en dorado (el número de retiro / objetivo) */}
+      {/* Gold "=" button (the retirement number / target) */}
       <rect x="37.0" y="45.4" width="5.2" height="5.2" rx="1.4" fill="#b07d18" />
     </svg>
   );
