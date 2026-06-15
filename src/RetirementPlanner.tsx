@@ -13,6 +13,8 @@ import {
 import {
   computeLifecycle,
   coastNumber,
+  resolveSolve,
+  applySolve,
   ALLOCATION_LABELS,
   ALLOCATIONS,
   DEFAULT_AGE,
@@ -21,6 +23,7 @@ import {
   type Allocation,
   type Assumptions,
   type PlanInputs,
+  type SolveFor,
 } from "./finance";
 import {
   DEFAULT_CURRENCY,
@@ -38,12 +41,30 @@ import { AdvancedSettings } from "./components/AdvancedSettings";
 import { PercentInput } from "./components/PercentInput";
 import { InfoTip } from "./components/InfoTip";
 import { DataActions } from "./components/DataActions";
+import { SegmentedControl } from "./components/SegmentedControl";
 import { SegmentedWithCustom } from "./components/SegmentedWithCustom";
+import { SolvedField } from "./components/SolvedField";
 import { StatusBanner } from "./components/StatusBanner";
 import { type PlanData } from "./exportData";
 import { readPlanFromHash } from "./shareUrl";
 
 const WITHDRAWAL_OPTIONS = [0.03, 0.035, 0.04];
+
+/** Modos del selector "¿Qué querés calcular?" (auto-cálculo). */
+const SOLVE_OPTIONS: { value: SolveFor; label: string }[] = [
+  { value: "timeline", label: "Cuándo me jubilo" },
+  { value: "monthly", label: "Cuánto aportar" },
+  { value: "initial", label: "Inversión inicial" },
+];
+
+/** La bajada que explica, en cada modo, qué queda fijo y qué se calcula. */
+const SOLVE_HINT: Record<SolveFor, string> = {
+  timeline: "Dejás todo fijo y te decimos a qué edad podés jubilarte.",
+  monthly:
+    "Fijás la edad a la que querés jubilarte y calculamos cuánto aportar por mes.",
+  initial:
+    "Fijás la edad y el aporte; calculamos con cuánta inversión inicial necesitás arrancar hoy.",
+};
 const ALLOCATION_NOTES: Record<Allocation, string> = {
   aggressive: "máximo rendimiento, máxima volatilidad",
   balanced: "el clásico balance de la regla del 4%",
@@ -79,9 +100,27 @@ export default function RetirementPlanner() {
   );
 
   const { dark } = useTheme();
+
+  // ¿Hay edad cargada? El auto-cálculo es por edad de jubilación, así que sin
+  // edad (currentAge 0 = "sin cargar") no aplica. Coincide con planSummary.
+  const ageMode = currentAge > 0;
+
+  // Auto-cálculo: en los modos "monthly"/"initial" despejamos el valor que falta
+  // y lo inyectamos en los inputs ANTES de simular (vía applySolve), de modo que
+  // gráfico, stats y veredicto cuenten la misma historia. `solve` guarda el
+  // resultado del despeje para mostrarlo en el campo. El aporte/inicial que tipeó
+  // el usuario nunca se pisa: queda en `inputs` y vuelve al pasar a "timeline".
+  const solve = useMemo(
+    () => resolveSolve(inputs, assumptions, currentAge),
+    [inputs, assumptions, currentAge]
+  );
+  const effective = useMemo(
+    () => applySolve(inputs, assumptions, currentAge),
+    [inputs, assumptions, currentAge]
+  );
   const result = useMemo(
-    () => computeLifecycle(inputs, assumptions),
-    [inputs, assumptions]
+    () => computeLifecycle(effective.inputs, effective.assumptions),
+    [effective]
   );
 
   const money = useMemo(() => makeCurrencyFormatter(currency), [currency]);
@@ -160,13 +199,13 @@ export default function RetirementPlanner() {
   // real en vez de "años desde hoy".
   const summary = buildPlanSummary(
     result,
-    inputs,
-    assumptions,
+    effective.inputs,
+    effective.assumptions,
     currentAge,
     { money: (n) => money.format(Math.round(n)), pct: formatPct },
     "screen"
   );
-  const { ageMode, retirementAge, retirementSummary } = summary;
+  const { retirementAge, retirementSummary } = summary;
 
   // Coast FIRE: capital que, sin aportar más, capitaliza hasta el número de
   // retiro para la edad objetivo. Solo tiene sentido si hay edad cargada y la
@@ -185,6 +224,51 @@ export default function RetirementPlanner() {
   const contributedPct =
     breakdownTotal > 0 ? (contributed / breakdownTotal) * 100 : 0;
 
+  // En modo despeje, qué mostrar en el campo calculado (aporte o inicial):
+  // el valor resuelto + una aclaración, o "—" con el motivo si no es posible.
+  const solveMode = inputs.solveFor !== "timeline";
+  const solvedField = (() => {
+    const kind = inputs.solveFor; // "monthly" | "initial" (no entra en "timeline")
+    const suffix = kind === "monthly" ? " / mes" : "";
+    if (!ageMode) {
+      return {
+        ok: false,
+        display: "—",
+        note: "Cargá tu edad actual arriba para calcular esto.",
+      };
+    }
+    if (!solve) return { ok: false, display: "—", note: "" };
+    switch (solve.status) {
+      case "ok":
+        return {
+          ok: true,
+          display: `${money.format(Math.round(solve.value))}${suffix}`,
+          note: `para jubilarte a los ${inputs.coastTargetAge}`,
+        };
+      case "alreadyThere":
+        return {
+          ok: true,
+          display: `${money.format(0)}${suffix}`,
+          note:
+            kind === "monthly"
+              ? "Con tu inversión inicial ya llegás a esa edad: no necesitás aportar."
+              : "Con tu aporte mensual ya llegás a esa edad: no necesitás inversión inicial.",
+        };
+      case "noHorizon":
+        return {
+          ok: false,
+          display: "—",
+          note: "Elegí una edad de jubilación mayor a tu edad actual.",
+        };
+      case "unreachable":
+        return {
+          ok: false,
+          display: "—",
+          note: "Con esa tasa de retiro tu número es infinito. Subí la tasa de retiro.",
+        };
+    }
+  })();
+
   return (
     <section className="calc" id="calculadora">
       <div className="calc-inner">
@@ -201,6 +285,28 @@ export default function RetirementPlanner() {
         <DataActions data={planData} onImport={applyImport} />
 
         <div className="panel">
+          <div className="field field-wide">
+            <label>
+              <span className="label-with-info">
+                ¿Qué querés calcular?
+                <InfoTip label="Cómo funciona el auto-cálculo">
+                  Elegí qué valor querés que la calculadora despeje. Dejás todo
+                  lo demás fijo y ese campo se calcula solo para que los números
+                  cierren. <strong>Cuándo me jubilo</strong> es el modo clásico;
+                  los otros dos fijan la edad de jubilación y despejan el aporte
+                  o la inversión inicial.
+                </InfoTip>
+              </span>
+            </label>
+            <SegmentedControl
+              options={SOLVE_OPTIONS}
+              value={inputs.solveFor}
+              onChange={(v) => set("solveFor", v)}
+              ariaLabel="¿Qué querés calcular?"
+            />
+            <small>{SOLVE_HINT[inputs.solveFor]}</small>
+          </div>
+
           <div className="field">
             <label>Edad actual</label>
             <div className="years-input">
@@ -221,7 +327,7 @@ export default function RetirementPlanner() {
             <div className="field">
               <label>
                 <span className="label-with-info">
-                  Jubilación objetivo
+                  {solveMode ? "Edad de jubilación objetivo" : "Jubilación objetivo"}
                   <InfoTip label="Qué es Coast FIRE">
                     <strong>Coast FIRE</strong> es el capital que, sin aportar un
                     peso más, crece solo hasta tu número de retiro para cuando
@@ -241,37 +347,51 @@ export default function RetirementPlanner() {
                 />
                 <span>años</span>
               </div>
-              <small>Edad a la que querés jubilarte (para Coast FIRE).</small>
+              <small>
+                {inputs.solveFor === "monthly"
+                  ? "Ajustamos el aporte mensual para que llegues justo a esta edad."
+                  : inputs.solveFor === "initial"
+                  ? "Ajustamos la inversión inicial para que llegues justo a esta edad."
+                  : "Edad a la que querés jubilarte (para Coast FIRE)."}
+              </small>
             </div>
           )}
 
-          <div className="field">
-            <label>Inversión inicial</label>
-            <div className="money">
-              <span>{symbol}</span>
-              <input
-                type="number"
-                min={0}
-                step={500}
-                value={inputs.initial}
-                onChange={(e) => set("initial", Number(e.target.value))}
-              />
+          {inputs.solveFor === "initial" ? (
+            <SolvedField label="Inversión inicial" {...solvedField} />
+          ) : (
+            <div className="field">
+              <label>Inversión inicial</label>
+              <div className="money">
+                <span>{symbol}</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={500}
+                  value={inputs.initial}
+                  onChange={(e) => set("initial", Number(e.target.value))}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="field">
-            <label>Aporte mensual</label>
-            <div className="money">
-              <span>{symbol}</span>
-              <input
-                type="number"
-                min={0}
-                step={100}
-                value={inputs.monthly}
-                onChange={(e) => set("monthly", Number(e.target.value))}
-              />
+          {inputs.solveFor === "monthly" ? (
+            <SolvedField label="Aporte mensual" {...solvedField} />
+          ) : (
+            <div className="field">
+              <label>Aporte mensual</label>
+              <div className="money">
+                <span>{symbol}</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={100}
+                  value={inputs.monthly}
+                  onChange={(e) => set("monthly", Number(e.target.value))}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="field">
             <label>

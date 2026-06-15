@@ -34,6 +34,17 @@ export const ALLOCATIONS: PresetAllocation[] = ["aggressive", "balanced", "conse
 export type Trend = "grow" | "flat" | "decline";
 
 /**
+ * Qué incógnita resuelve la calculadora.
+ * - "timeline": el modo clásico. Fijás el aporte (y todo lo demás) y te decimos
+ *   a qué edad / en cuántos años llegás a tu número.
+ * - "monthly": fijás la edad de jubilación objetivo y despejamos el aporte
+ *   mensual necesario para llegar justo a esa edad.
+ * - "initial": fijás la edad y el aporte y despejamos con cuánta inversión
+ *   inicial necesitás arrancar hoy.
+ */
+export type SolveFor = "timeline" | "monthly" | "initial";
+
+/**
  * Supuestos del modelo. Todos configurables desde la UI.
  *
  * Si `returnMode` es "nominal", los rendimientos de abajo se interpretan como
@@ -94,8 +105,17 @@ export interface PlanInputs {
    * Se interpreta según `returnMode` (real o nominal), igual que los demás.
    */
   customRetirementReturn: number;
-  /** Edad objetivo de jubilación, usada solo para el cálculo de Coast FIRE. */
+  /**
+   * Edad objetivo de jubilación. La usa el cálculo de Coast FIRE y, en los modos
+   * de auto-cálculo (`solveFor` != "timeline"), es la meta sobre la que se
+   * despeja el aporte mensual o la inversión inicial.
+   */
   coastTargetAge: number;
+  /**
+   * Qué valor auto-calcula la app. Por defecto "timeline" (modo clásico, sin
+   * despeje), así los planes viejos se comportan igual que antes.
+   */
+  solveFor: SolveFor;
 }
 
 export const DEFAULT_INPUTS: PlanInputs = {
@@ -107,6 +127,7 @@ export const DEFAULT_INPUTS: PlanInputs = {
   retirementAllocation: "balanced",
   customRetirementReturn: 0.05,
   coastTargetAge: 65,
+  solveFor: "timeline",
 };
 
 /**
@@ -171,6 +192,153 @@ export function coastNumber(
   if (!isFinite(fireTarget)) return Infinity;
   if (yearsToTarget <= 0) return fireTarget;
   return fireTarget / Math.pow(1 + annualReturn, yearsToTarget);
+}
+
+// ----------------------------------------------------------- Auto-cálculo ---
+// El despeje (modos "monthly" / "initial") es el INVERSO de la acumulación. La
+// clave: el saldo al cabo de N años es AFÍN en el valor a despejar
+//   saldo(N) = inicial · crecimientoDelInicial + aporte · factorDelAporte
+// así que alcanza con evaluar la recurrencia en dos puntos para recuperar la
+// recta y despejar exacto, sin tanteo. Para que el resultado sea consistente
+// con `computeLifecycle`, replicamos su recurrencia mes a mes al pie de la letra.
+
+/**
+ * Corre la misma recurrencia de acumulación que `computeLifecycle`, durante
+ * exactamente `years` años (sin cortar al alcanzar el objetivo), y devuelve el
+ * saldo final. Puro: no toca estado ni React.
+ */
+function accumulateBalance(
+  initial: number,
+  monthly: number,
+  years: number,
+  monthlyRate: number,
+  monthlyGrowth: number
+): number {
+  let balance = initial;
+  let currentMonthly = monthly;
+  const months = years * 12;
+  for (let month = 1; month <= months; month++) {
+    balance = balance * (1 + monthlyRate) + currentMonthly;
+    if (month % 12 === 0) currentMonthly *= 1 + monthlyGrowth;
+  }
+  return balance;
+}
+
+export type SolveStatus = "ok" | "alreadyThere" | "noHorizon" | "unreachable";
+
+export interface SolveResult {
+  /** El valor despejado (aporte mensual o inversión inicial), siempre >= 0. */
+  value: number;
+  /** Por qué el resultado es lo que es, para que la UI muestre el mensaje justo. */
+  status: SolveStatus;
+  /** El número de retiro usado, para mostrarlo sin recalcular. */
+  target: number;
+}
+
+// Empujamos el valor despejado un pelo hacia arriba (relativo al objetivo) para
+// cruzar el chequeo estricto `saldo >= número` de la simulación: sin esto, el
+// residuo de punto flotante deja el saldo un centésimo por debajo y el modelo
+// "se jubila" en el año N+1 en vez del N.
+const SOLVE_NUDGE = 1e-6;
+
+/**
+ * Aporte mensual necesario para alcanzar el número de retiro EXACTAMENTE en
+ * `years` años, con todo lo demás fijo. Ignora `inputs.monthly` (es lo que
+ * despeja). Usa el mismo rendimiento real efectivo que la simulación.
+ */
+export function solveMonthlyForYears(
+  inputs: PlanInputs,
+  assumptions: Assumptions,
+  years: number
+): SolveResult {
+  const target = fireNumber(inputs.monthlySpend, inputs.withdrawalRate);
+  if (!isFinite(target)) return { value: 0, status: "unreachable", target };
+  if (years <= 0) return { value: 0, status: "noHorizon", target };
+
+  const monthlyRate =
+    effectiveRealReturn(assumptions.accumulationReturn, assumptions) / 12;
+  const g = inputs.monthlyGrowth;
+  // Saldo solo con el inicial (aporte 0) y aporte unitario (factor de la recta).
+  const seed = accumulateBalance(Math.max(0, inputs.initial), 0, years, monthlyRate, g);
+  if (seed >= target) return { value: 0, status: "alreadyThere", target };
+  const factor = accumulateBalance(0, 1, years, monthlyRate, g);
+  if (factor <= 0) return { value: 0, status: "unreachable", target };
+
+  const required = (target - seed + target * SOLVE_NUDGE) / factor;
+  return { value: required, status: "ok", target };
+}
+
+/**
+ * Inversión inicial necesaria para alcanzar el número de retiro en `years` años,
+ * con el aporte mensual y todo lo demás fijo. Ignora `inputs.initial`.
+ */
+export function solveInitialForYears(
+  inputs: PlanInputs,
+  assumptions: Assumptions,
+  years: number
+): SolveResult {
+  const target = fireNumber(inputs.monthlySpend, inputs.withdrawalRate);
+  if (!isFinite(target)) return { value: 0, status: "unreachable", target };
+  if (years <= 0) return { value: 0, status: "noHorizon", target };
+
+  const monthlyRate =
+    effectiveRealReturn(assumptions.accumulationReturn, assumptions) / 12;
+  const g = inputs.monthlyGrowth;
+  const fromMonthly = accumulateBalance(0, Math.max(0, inputs.monthly), years, monthlyRate, g);
+  if (fromMonthly >= target) return { value: 0, status: "alreadyThere", target };
+  // Factor del inicial = (1 + r/12)^(12·años); lo sacamos de la misma recurrencia.
+  const lumpFactor = accumulateBalance(1, 0, years, monthlyRate, g);
+  if (lumpFactor <= 0) return { value: 0, status: "unreachable", target };
+
+  const required = (target - fromMonthly + target * SOLVE_NUDGE) / lumpFactor;
+  return { value: required, status: "ok", target };
+}
+
+/**
+ * Resuelve el despeje activo (según `inputs.solveFor`) para mostrarlo en la UI.
+ * Devuelve null en modo "timeline" o si no hay edad cargada (sin edad no hay
+ * horizonte: el despeje es por edad de jubilación).
+ */
+export function resolveSolve(
+  inputs: PlanInputs,
+  assumptions: Assumptions,
+  currentAge: number
+): SolveResult | null {
+  if (inputs.solveFor === "timeline" || currentAge <= 0) return null;
+  const years = inputs.coastTargetAge - currentAge;
+  return inputs.solveFor === "monthly"
+    ? solveMonthlyForYears(inputs, assumptions, years)
+    : solveInitialForYears(inputs, assumptions, years);
+}
+
+/**
+ * Inyecta el valor despejado en los inputs antes de simular, para que el
+ * gráfico, los stats, el veredicto y el PDF cuenten todos la misma historia.
+ * NUNCA muta el estado: el aporte/inicial que tipeó el usuario queda intacto en
+ * `inputs` y se restaura al volver a "timeline". En "timeline", sin edad, o si
+ * el objetivo es inalcanzable, devuelve los inputs/supuestos tal cual.
+ */
+export function applySolve(
+  inputs: PlanInputs,
+  assumptions: Assumptions,
+  currentAge: number
+): { inputs: PlanInputs; assumptions: Assumptions } {
+  const solve = resolveSolve(inputs, assumptions, currentAge);
+  if (!solve || (solve.status !== "ok" && solve.status !== "alreadyThere")) {
+    return { inputs, assumptions };
+  }
+  const years = inputs.coastTargetAge - currentAge;
+  // Si la edad objetivo cae más allá del horizonte por defecto, lo ampliamos
+  // para que la simulación hacia adelante alcance a dibujar hasta esa edad.
+  const reachAssumptions =
+    years > assumptions.maxAccumulationYears
+      ? { ...assumptions, maxAccumulationYears: years }
+      : assumptions;
+  const solvedInputs =
+    inputs.solveFor === "monthly"
+      ? { ...inputs, monthly: solve.value }
+      : { ...inputs, initial: solve.value };
+  return { inputs: solvedInputs, assumptions: reachAssumptions };
 }
 
 /**

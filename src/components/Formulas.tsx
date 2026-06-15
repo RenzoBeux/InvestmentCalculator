@@ -83,6 +83,19 @@ const GROUPS: Group[] = [
         ),
         desc: "Tu plata es lo que pusiste (inicial + aportes); el resto del saldo lo generó el interés compuesto. Es la barra de desglose.",
       },
+      {
+        name: "Auto-cálculo (despeje)",
+        expr: (
+          <>
+            <V>aporte</V> = (<V>número</V> − <V>inicial</V> × (1 + <V>r</V> ÷ 12)
+            <sup>
+              <V>n</V>
+            </sup>
+            ) ÷ <V>F</V>
+          </>
+        ),
+        desc: 'En los modos "Cuánto aportar" / "Inversión inicial", el saldo final (a n meses) es lineal en el valor a despejar, así que se resuelve exacto, sin tanteo. F acumula cada $1 de aporte —con su crecimiento g— hasta el final; la inversión inicial se despeja igual, contra su propio factor.',
+      },
     ],
   },
   {

@@ -634,6 +634,45 @@ input[type="range"]::-moz-range-thumb {
   border-color: var(--ink);
 }
 
+/* ------------------------------------------------- Campo auto-calculado --- */
+/* En los modos de despeje, el input editable se reemplaza por esta tarjeta de
+   solo lectura con el valor que la calculadora resolvió. */
+.solved-pill {
+  font-family: var(--font-ui);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--ok-bg);
+  border-radius: 999px;
+  padding: 0.14rem 0.5rem;
+}
+
+.solved-value {
+  display: flex;
+  align-items: baseline;
+  /* Alto similar al del input de dinero para que el grid no salte al alternar. */
+  min-height: 2.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--ok-bg);
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.3rem;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+/* Sin resultado válido (objetivo imposible o falta la edad): tarjeta apagada. */
+.solved-value.is-empty {
+  border-color: var(--line-strong);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
 .stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

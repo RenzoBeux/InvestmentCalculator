@@ -25,10 +25,11 @@ import { planFileName } from "./dateStamp";
 
 /**
  * Versión del esquema del archivo. Subila si cambia la forma de los datos.
- * v2: se agregaron `monthlyGrowth` y `coastTargetAge` a los inputs. Los archivos
- * v1 siguen cargando: los campos nuevos caen a sus valores por defecto.
+ * v2: se agregaron `monthlyGrowth` y `coastTargetAge` a los inputs.
+ * v3: se agregó `solveFor` (modo de auto-cálculo). Los archivos v1/v2 siguen
+ * cargando: los campos nuevos caen a sus valores por defecto ("timeline").
  */
-export const EXPORT_VERSION = 2;
+export const EXPORT_VERSION = 3;
 
 const APP_MARKER = "planificador-fire";
 
@@ -175,6 +176,11 @@ function sanitizeInputs(v: unknown): PlanInputs {
     coastTargetAge: clampAge(
       num(o.coastTargetAge, DEFAULT_INPUTS.coastTargetAge)
     ),
+    // Lista blanca, no num(): cualquier cosa fuera del union cae a "timeline".
+    solveFor:
+      o.solveFor === "monthly" || o.solveFor === "initial"
+        ? o.solveFor
+        : DEFAULT_INPUTS.solveFor,
   };
 }
 

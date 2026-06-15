@@ -11,6 +11,7 @@ import type { jsPDF } from "jspdf";
 import {
   computeLifecycle,
   coastNumber,
+  applySolve,
   ALLOCATION_LABELS,
   type LifecycleResult,
 } from "./finance";
@@ -51,7 +52,15 @@ const fill = (d: jsPDF, hex: string) => d.setFillColor(...rgb(hex));
 
 export async function generatePlanPdf(plan: PlanData): Promise<void> {
   const { jsPDF: JsPDF } = await import("jspdf");
-  const { inputs, assumptions, currency, currentAge } = plan;
+  const { currency, currentAge } = plan;
+  // En los modos de auto-cálculo, inyectamos el valor despejado (aporte o
+  // inicial) ANTES de simular, igual que la pantalla, para que el PDF y la app
+  // muestren exactamente los mismos números.
+  const { inputs, assumptions } = applySolve(
+    plan.inputs,
+    plan.assumptions,
+    currentAge
+  );
   const result = computeLifecycle(inputs, assumptions);
 
   const money = makeCurrencyFormatter(currency);
@@ -181,8 +190,19 @@ export async function generatePlanPdf(plan: PlanData): Promise<void> {
 
   const datos: [string, string][] = [
     ["Edad actual", ageMode ? `${currentAge} años` : "—"],
-    ["Inversión inicial", fmt(inputs.initial)],
-    ["Aporte mensual", fmt(inputs.monthly)],
+    ...(inputs.solveFor !== "timeline" && ageMode
+      ? ([
+          ["Edad de jubilación objetivo", `${inputs.coastTargetAge} años`],
+        ] as [string, string][])
+      : []),
+    [
+      inputs.solveFor === "initial" ? "Inversión inicial (calculada)" : "Inversión inicial",
+      fmt(inputs.initial),
+    ],
+    [
+      inputs.solveFor === "monthly" ? "Aporte mensual (calculado)" : "Aporte mensual",
+      fmt(inputs.monthly),
+    ],
     ...(inputs.monthlyGrowth > 0
       ? ([
           ["Aumento del aporte", `${formatPct(inputs.monthlyGrowth)} real/año`],
