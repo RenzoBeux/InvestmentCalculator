@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   Tooltip,
   ReferenceLine,
+  ReferenceDot,
   ResponsiveContainer,
 } from "recharts";
 import {
@@ -215,22 +216,47 @@ export default function RetirementPlanner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Coast FIRE: capital that, without contributing more, compounds up to the
+  // retirement number by the target age. Only applies in the solve modes (in
+  // "timeline" there's no target age) and if the target retirement is further out.
+  const coastApplies =
+    solveMode && ageMode && inputs.coastTargetAge > currentAge;
+  const coastYears = inputs.coastTargetAge - currentAge;
+  const coast = coastNumber(
+    result.fireNumber,
+    result.accumulationReturn,
+    coastYears
+  );
+
   const chartData = useMemo(() => {
-    const { accumulation, retirement, accYears, totalYears } =
-      buildChartSeries(result);
-    const rows: { year: number; acc: number | null; ret: number | null }[] = [];
-    for (let k = 0; k <= totalYears; k++) {
+    const coastInput =
+      coastApplies && isFinite(coast) ? { value: coast, years: coastYears } : null;
+    const { accumulation, retirement, coasting, accYears, totalYears } =
+      buildChartSeries(result, coastInput);
+    const rows: {
+      year: number;
+      acc: number | null;
+      ret: number | null;
+      coast: number | null;
+    }[] = [];
+    // Span the longer of the two horizons: the coast curve can reach further
+    // than the accumulation+retirement series (e.g. an "alreadyThere" solve
+    // whose retirement depletes before the target age), and it must still land
+    // on the target line. acc/ret stay null past their own ranges.
+    const lastYear = Math.max(totalYears, coasting.length - 1);
+    for (let k = 0; k <= lastYear; k++) {
       rows.push({
         year: k,
         acc: k <= accYears ? Math.round(accumulation[k].value) : null,
         ret:
-          result.reached && k >= accYears
+          result.reached && k >= accYears && k - accYears < retirement.length
             ? Math.round(retirement[k - accYears].value)
             : null,
+        coast: k < coasting.length ? Math.round(coasting[k].value) : null,
       });
     }
     return rows;
-  }, [result]);
+  }, [result, coastApplies, coast, coastYears]);
 
   const retColor = result.trend === "decline" ? COLORS.decline : COLORS.grow;
   const axisColor = dark ? "rgba(236,230,216,0.5)" : "rgba(33,29,22,0.5)";
@@ -248,17 +274,6 @@ export default function RetirementPlanner() {
     "screen"
   );
   const { retirementAge, retirementSummary } = summary;
-
-  // Coast FIRE: capital that, without contributing more, compounds up to the
-  // retirement number by the target age. Only applies in the solve modes (in
-  // "timeline" there's no target age) and if the target retirement is further out.
-  const coastApplies =
-    solveMode && ageMode && inputs.coastTargetAge > currentAge;
-  const coast = coastNumber(
-    result.fireNumber,
-    result.accumulationReturn,
-    inputs.coastTargetAge - currentAge
-  );
 
   // Own contributions vs. compound interest (on the balance when reaching the number).
   const contributed = result.contributedAtFire;
@@ -633,7 +648,17 @@ export default function RetirementPlanner() {
             </strong>
           </div>
           <div className="stat">
-            <span>En el retiro tu dinero</span>
+            <span>
+              En el retiro tu dinero{" "}
+              <InfoTip label="Por qué puede decir que dura para siempre">
+                Es una proyección a rendimiento{" "}
+                <strong>real promedio y constante</strong>: si tu cartera rinde
+                más de lo que retirás cada año, matemáticamente el dinero nunca
+                se agota. Ojo: el mercado real sube y baja, así que la{" "}
+                <strong>regla del 4%</strong> apunta a que dure al menos ~30 años
+                como colchón ante malas rachas, sobre todo al inicio del retiro.
+              </InfoTip>
+            </span>
             <strong>{retirementSummary}</strong>
           </div>
           {coastApplies && (
@@ -731,7 +756,11 @@ export default function RetirementPlanner() {
                 <Tooltip
                   formatter={(value, name) => [
                     money.format(Number(value)),
-                    name === "acc" ? "Acumulando" : "En el retiro",
+                    name === "acc"
+                      ? "Acumulando"
+                      : name === "coast"
+                      ? "Coast FIRE (sin aportar)"
+                      : "En el retiro",
                   ]}
                   labelFormatter={(label) =>
                     ageMode ? `${currentAge + Number(label)} años` : `Año ${label}`
@@ -777,6 +806,17 @@ export default function RetirementPlanner() {
                   dot={false}
                   isAnimationActive={false}
                 />
+                {/* Coast FIRE "ghost": coasting to the target without contributing. */}
+                <Line
+                  type="monotone"
+                  dataKey="coast"
+                  stroke={COLORS.coast}
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  connectNulls={false}
+                  dot={false}
+                  isAnimationActive={false}
+                />
                 <Line
                   type="monotone"
                   dataKey="ret"
@@ -786,6 +826,21 @@ export default function RetirementPlanner() {
                   dot={false}
                   isAnimationActive={false}
                 />
+                {coastApplies && isFinite(coast) && (
+                  <ReferenceDot
+                    x={0}
+                    y={Math.round(coast)}
+                    r={3}
+                    fill={COLORS.coast}
+                    stroke="none"
+                    label={{
+                      value: "Coast FIRE",
+                      position: "right",
+                      fill: COLORS.coast,
+                      fontSize: 11,
+                    }}
+                  />
+                )}
               </ComposedChart>
             </ResponsiveContainer>
           </div>

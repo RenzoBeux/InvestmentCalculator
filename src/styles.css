@@ -701,14 +701,22 @@ input[type="range"]::-moz-range-thumb {
   padding: 1rem 1.1rem;
 }
 
-.stat span {
+/* Direct child only: the retirement stat now nests an InfoTip, whose bubble
+   must keep its own color/size and not inherit this muted label styling. */
+.stat > span {
   display: block;
   font-size: 0.8rem;
+  line-height: 1.3;
+  /* Reserve two lines so the big value below lines up across cards even when a
+     label wraps (some labels are one line, some two, e.g. once the (i) is added). */
+  min-height: 2.6em;
   color: var(--muted);
   margin-bottom: 0.35rem;
 }
 
-.stat strong {
+/* Direct child only: keep the big display size off the InfoTip bubble's own
+   <strong> tags (the bubble nests inside .stat). */
+.stat > strong {
   font-family: var(--font-display);
   font-weight: 500;
   font-size: 1.45rem;
@@ -1340,7 +1348,7 @@ input[type="range"]::-moz-range-thumb {
   .stat {
     padding: 0.85rem 0.8rem;
   }
-  .stat strong {
+  .stat > strong {
     font-size: 1.2rem;
   }
 

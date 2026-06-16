@@ -25,7 +25,7 @@ import type { PlanData } from "./exportData";
 import { SITE } from "./siteConfig";
 import { planFileName } from "./dateStamp";
 import { CHART } from "./palette";
-import { buildChartSeries } from "./chartSeries";
+import { buildChartSeries, type CoastInput } from "./chartSeries";
 import { buildPlanSummary } from "./planSummary";
 
 const INK = "#211D16";
@@ -35,6 +35,7 @@ const ACCENT = CHART.grow;
 const BLUE = CHART.accumulation;
 const RED = CHART.decline;
 const GOLD = CHART.target;
+const COAST = CHART.coast;
 const CARD = "#FBF7EF";
 
 type RGB = [number, number, number];
@@ -76,7 +77,13 @@ export async function generatePlanPdf(plan: PlanData): Promise<void> {
     "pdf"
   );
 
-  const coastApplies = ageMode && inputs.coastTargetAge > currentAge;
+  // Mirror the screen's gate (solve modes only): in "timeline" there's no
+  // target age, so Coast FIRE doesn't apply. Keeps the PDF from drifting from
+  // the on-screen UI, and matches the "Edad de jubilación objetivo" row below.
+  const coastApplies =
+    inputs.solveFor !== "timeline" &&
+    ageMode &&
+    inputs.coastTargetAge > currentAge;
   const coast = coastNumber(
     result.fireNumber,
     result.accumulationReturn,
@@ -243,7 +250,11 @@ export async function generatePlanPdf(plan: PlanData): Promise<void> {
   // Chart.
   y = sectionTitle(doc, "Proyección", M, y, CW);
   const chartH = Math.min(210, H - M - 56 - y);
-  drawChart(doc, result, currentAge, ageMode, axisFmt, M, y, CW, chartH);
+  const coastInput: CoastInput | null =
+    coastApplies && isFinite(coast)
+      ? { value: coast, years: inputs.coastTargetAge - currentAge }
+      : null;
+  drawChart(doc, result, currentAge, ageMode, axisFmt, M, y, CW, chartH, coastInput);
 
   // Footer: disclaimer.
   doc.setFont("helvetica", "normal");
@@ -345,9 +356,10 @@ function drawChart(
   x: number,
   y: number,
   w: number,
-  h: number
+  h: number,
+  coast: CoastInput | null
 ): void {
-  const series = buildChartSeries(result);
+  const series = buildChartSeries(result, coast);
   const accYears = series.accYears;
   const totalYears = Math.max(1, series.totalYears);
 
@@ -357,6 +369,10 @@ function drawChart(
     value,
   ]);
   const ret: [number, number][] = series.retirement.map(({ yearOffset, value }) => [
+    currentAge + yearOffset,
+    value,
+  ]);
+  const coasting: [number, number][] = series.coasting.map(({ yearOffset, value }) => [
     currentAge + yearOffset,
     value,
   ]);
@@ -432,6 +448,21 @@ function drawChart(
     );
   }
 
+  // Coast FIRE "ghost" curve (dashed slate): coasting to the target without
+  // contributing. Drawn before the solid curves so they sit on top where they meet.
+  if (coasting.length > 1) {
+    drawPolyline(
+      doc,
+      coasting.map(([a, v]) => [px(a), py(v)]),
+      COAST,
+      [4, 3]
+    );
+    const [sa, sv] = coasting[0];
+    ink(doc, COAST);
+    doc.setFontSize(7);
+    doc.text("Coast FIRE", px(sa) + 3, py(sv) - 3);
+  }
+
   // Accumulation curve (blue).
   drawPolyline(doc, acc.map(([a, v]) => [px(a), py(v)]), BLUE);
   // Retirement curve (green if it lasts, red if it depletes).
@@ -449,11 +480,18 @@ function drawChart(
   doc.line(px0, py0 + ph, px0 + pw, py0 + ph);
 }
 
-function drawPolyline(doc: jsPDF, pts: [number, number][], hex: string): void {
+function drawPolyline(
+  doc: jsPDF,
+  pts: [number, number][],
+  hex: string,
+  dash?: number[]
+): void {
   if (pts.length < 2) return;
   stroke(doc, hex);
-  doc.setLineWidth(1.6);
+  doc.setLineWidth(dash ? 1.2 : 1.6);
+  if (dash) doc.setLineDashPattern(dash, 0);
   for (let i = 1; i < pts.length; i++) {
     doc.line(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]);
   }
+  if (dash) doc.setLineDashPattern([], 0);
 }

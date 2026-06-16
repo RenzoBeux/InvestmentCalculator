@@ -14,4 +14,6 @@ export const CHART = {
   decline: "#B23A2E",
   /** Retirement number / target line (gold). */
   target: "#B07D18",
+  /** Coast FIRE "ghost" trajectory: coasting to the target without contributing (muted slate). */
+  coast: "#6E7E99",
 } as const;
